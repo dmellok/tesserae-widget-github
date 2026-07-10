@@ -167,6 +167,36 @@ export default function render(shadow, ctx) {
        </span>`
     : "";
 
+  // Fragments (issue #60): place one part of the card on the Panels canvas.
+  const frag = ctx?.fragment || "full";
+  if (frag !== "full") {
+    const wrap = (inner, extra) =>
+      `${css}<style>.w-body{height:100%;display:flex;flex-direction:column;justify-content:center;gap:var(--space-2);min-height:0}${extra || ""}</style>` +
+      `<div class="w" data-widget="github_activity"><div class="w-body">${inner}</div></div>`;
+    if (frag === "events") {
+      shadow.innerHTML = wrap(
+        `<div class="status-hero" style="align-items:center;justify-content:center;gap:var(--space-3)">
+          <i class="ph-bold ph-pulse" style="color:var(--accent-3);font-size:clamp(1.8em,26cqmin,6em)"></i>
+          <div class="lockup"><span class="status-state" style="font-size:clamp(1.8em,24cqmin,6em)">${escapeHtml(String(total))}</span><span class="status-sub">events this week</span></div>
+        </div>`,
+        ".w-body{justify-content:center;align-items:center}"
+      );
+      return;
+    }
+    if (frag === "stats") {
+      shadow.innerHTML = wrap(`<div class="status-grid" style="flex:1">${grid}</div>`);
+      return;
+    }
+    if (frag === "histogram") {
+      shadow.innerHTML = wrap(
+        dailyTyped.length >= 2
+          ? `<div style="flex:1;min-height:0;display:flex">${stackedHistogram({ days: dailyTyped, labels, todayIdx: dailyTyped.length - 1, w: 280, h: 80 })}</div>`
+          : `<p class="u-muted">No activity data</p>`
+      );
+      return;
+    }
+  }
+
   shadow.innerHTML = `
     ${css}
     <div class="w" data-widget="github_activity">

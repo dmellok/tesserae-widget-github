@@ -232,6 +232,36 @@ export default function render(shadow, ctx) {
     }
   `;
 
+  // Fragments (issue #60): place one part of the card on the Panels canvas.
+  const frag = ctx?.fragment || "full";
+  if (frag !== "full") {
+    const wrap = (inner, extra) =>
+      `${css}<style>.w-body{height:100%;display:flex;flex-direction:column;justify-content:center;gap:var(--space-2);min-height:0}${extra || ""}</style>` +
+      `<div class="w" data-widget="github_contributions"><div class="w-body">${inner}</div></div>`;
+    if (frag === "heatmap") {
+      shadow.innerHTML = wrap(
+        `<div class="heat" style="flex:1;min-height:0">${cells.join("")}</div>
+         <div class="heat-legend">Less <div class="heat-cell"></div><div class="heat-cell l1"></div><div class="heat-cell l2"></div><div class="heat-cell l3"></div><div class="heat-cell l4"></div> More</div>`,
+        layout
+      );
+      return;
+    }
+    if (frag === "streaks") {
+      shadow.innerHTML = wrap(
+        `<div class="contrib-streaks">
+          <div class="streak-chip current"><i class="ph-bold ph-flame" style="color:var(--accent-1)"></i><div class="streak-text"><span class="streak-value">${current}<span class="streak-unit">d</span></span><span class="streak-label">Current streak</span></div></div>
+          <div class="streak-chip longest"><i class="ph-bold ph-trophy" style="color:var(--accent-2)"></i><div class="streak-text"><span class="streak-value">${longest}<span class="streak-unit">d</span></span><span class="streak-label">Longest streak</span></div></div>
+        </div>`,
+        layout
+      );
+      return;
+    }
+    if (frag === "stats") {
+      shadow.innerHTML = wrap(`<div class="status-grid">${gridHtml}</div>`, layout);
+      return;
+    }
+  }
+
   shadow.innerHTML = `
     ${css}
     <style>${layout}</style>

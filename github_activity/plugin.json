@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Activity",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "kind": "widget",
   "description": "Recent public activity for a GitHub user. Pushes / PRs / issues / releases broken out as type-coloured tiles; a 7-day stacked-bar histogram segments each day's events by type and centres a Phosphor glyph on the dominant kind; an activity-streak pill counts consecutive days back from today. Defaults to the username in Plugins \u2192 GitHub Core.",
   "icon": "ph-git-commit",
@@ -32,5 +32,11 @@
   },
   "requires": [
     "network:api.github.com"
+  ],
+  "fragments": [
+    { "id": "full", "label": "Activity card", "w": 300, "h": 200, "icon": "ph-git-commit" },
+    { "id": "events", "label": "Events count", "w": 160, "h": 90, "icon": "ph-pulse" },
+    { "id": "stats", "label": "Type breakdown", "w": 220, "h": 120, "icon": "ph-squares-four" },
+    { "id": "histogram", "label": "7-day histogram", "w": 260, "h": 90, "icon": "ph-chart-bar" }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Repo Card",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "kind": "widget",
   "description": "Single-repo card. Pairs the language split + stars / forks / issues / release stats with a 52-week commit activity sparkline and a top-contributors strip (up to 5, avatar + login + contribution count). Public repos work without a token.",
   "icon": "ph-book-bookmark",
@@ -27,5 +27,13 @@
   },
   "requires": [
     "network:api.github.com"
+  ],
+  "fragments": [
+    { "id": "full", "label": "Repo card", "w": 300, "h": 220, "icon": "ph-book-bookmark" },
+    { "id": "stars", "label": "Stars", "w": 150, "h": 90, "icon": "ph-star" },
+    { "id": "stats", "label": "Stats grid", "w": 200, "h": 150, "icon": "ph-squares-four" },
+    { "id": "languages", "label": "Languages", "w": 240, "h": 90, "icon": "ph-code" },
+    { "id": "contributors", "label": "Contributors", "w": 260, "h": 90, "icon": "ph-users-three" },
+    { "id": "activity", "label": "Commit activity", "w": 220, "h": 80, "icon": "ph-chart-line" }
   ]
 }

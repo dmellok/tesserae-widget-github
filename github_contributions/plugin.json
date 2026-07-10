@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Contributions",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "kind": "widget",
   "description": "The familiar 53-week contributions heatmap for a user. Paired Current/Longest streak chips sit above the heatmap (ph-flame + ph-trophy on accent-tinted cards); a 12-month summary bar strip sits below, scaling each month's total against the year's max with the current month highlighted. Requires a PAT in Plugins \u2192 GitHub Core (GraphQL needs auth).",
   "icon": "ph-grid-four",
@@ -26,5 +26,11 @@
   },
   "requires": [
     "network:api.github.com"
+  ],
+  "fragments": [
+    { "id": "full", "label": "Contributions", "w": 300, "h": 200, "icon": "ph-grid-four" },
+    { "id": "heatmap", "label": "Heatmap", "w": 300, "h": 120, "icon": "ph-grid-four" },
+    { "id": "streaks", "label": "Streaks", "w": 220, "h": 90, "icon": "ph-flame" },
+    { "id": "stats", "label": "Stats", "w": 220, "h": 120, "icon": "ph-squares-four" }
   ]
 }

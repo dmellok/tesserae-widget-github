@@ -207,6 +207,50 @@ export default function render(shadow, ctx) {
     }
   `;
 
+  // Fragments (issue #60): the Panels canvas can place one part of the card.
+  // ctx.fragment selects which; "full" (default) is the whole card below.
+  const frag = ctx?.fragment || "full";
+  if (frag !== "full") {
+    const wrap = (inner, extra) =>
+      `${css}<style>.w-body{height:100%;display:flex;flex-direction:column;justify-content:center;gap:var(--space-2);min-height:0}${extra || ""}</style>` +
+      `<div class="w" data-widget="github_repo"><div class="w-body">${inner}</div></div>`;
+    if (frag === "stars") {
+      shadow.innerHTML = wrap(
+        `<div class="status-hero" style="align-items:center;justify-content:center;gap:var(--space-3)">
+          <i class="ph-bold ph-star" style="color:var(--accent-2);font-size:clamp(1.8em,26cqmin,6em)"></i>
+          <div class="lockup"><span class="status-state" style="font-size:clamp(1.8em,24cqmin,6em)">${escapeHtml(stars)}</span><span class="status-sub">stars</span></div>
+        </div>`,
+        ".w-body{justify-content:center;align-items:center}"
+      );
+      return;
+    }
+    if (frag === "stats") {
+      shadow.innerHTML = wrap(`<div class="status-grid" style="flex:1">${grid}</div>`);
+      return;
+    }
+    if (frag === "languages") {
+      shadow.innerHTML = wrap(langs.length ? languageBar(langs) : `<p class="u-muted">No language data</p>`);
+      return;
+    }
+    if (frag === "contributors") {
+      shadow.innerHTML = wrap(contribStrip || `<p class="u-muted">No contributors</p>`, layout);
+      return;
+    }
+    if (frag === "activity") {
+      shadow.innerHTML = wrap(
+        series.length >= 2
+          ? `<div style="flex:1;position:relative;min-height:0"><canvas></canvas></div>`
+          : `<p class="u-muted">No commit data</p>`
+      );
+      if (series.length >= 2) {
+        const canvas = shadow.querySelector("canvas");
+        const t = tokens(shadow.host);
+        sparkline(canvas, series, t.accent3);
+      }
+      return;
+    }
+  }
+
   shadow.innerHTML = `
     ${css}
     <style>${layout}</style>
