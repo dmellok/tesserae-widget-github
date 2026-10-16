@@ -1,0 +1,112 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "GitHub, Inbox",
+  "version": "0.1.0",
+  "kind": "widget",
+  "description": "Every open issue, pull request and discussion across the repos you own, in one list. Grouped by repo or by kind, newest activity first or oldest first. Pick repos to leave out, or exclude by pattern (tesserae-widget-*). Add orgs to cover their repos too. Issues and PRs work without a token; discussions need a PAT in Plugins → GitHub Core.",
+  "icon": "ph-tray",
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
+  "cell_options": [
+    {
+      "name": "user",
+      "type": "string",
+      "label": "Username (blank = GitHub Core default)",
+      "default": ""
+    },
+    {
+      "name": "extra_owners",
+      "type": "string",
+      "label": "Also include repos owned by (orgs or users, comma separated)",
+      "default": ""
+    },
+    {
+      "name": "show_issues",
+      "type": "boolean",
+      "label": "Issues",
+      "default": true
+    },
+    {
+      "name": "show_prs",
+      "type": "boolean",
+      "label": "Pull requests",
+      "default": true
+    },
+    {
+      "name": "show_discussions",
+      "type": "boolean",
+      "label": "Discussions (needs a token)",
+      "default": true
+    },
+    {
+      "name": "exclude_repos",
+      "type": "multiselect",
+      "label": "Repos to leave out",
+      "default": [],
+      "choices_from": "repo"
+    },
+    {
+      "name": "exclude_patterns",
+      "type": "string",
+      "label": "Also leave out (comma separated, * wildcards, e.g. tesserae-widget-*)",
+      "default": ""
+    },
+    {
+      "name": "group_by",
+      "type": "select",
+      "label": "Group by",
+      "default": "repo",
+      "choices": [
+        {"value": "repo", "label": "Repository"},
+        {"value": "kind", "label": "Kind (issues, PRs, discussions)"},
+        {"value": "none", "label": "One flat list"}
+      ]
+    },
+    {
+      "name": "sort",
+      "type": "select",
+      "label": "Order",
+      "default": "updated",
+      "choices": [
+        {"value": "updated", "label": "Latest activity first"},
+        {"value": "oldest", "label": "Oldest first (the stale ones on top)"},
+        {"value": "newest", "label": "Newest first"}
+      ]
+    },
+    {
+      "name": "max_items",
+      "type": "number",
+      "label": "Rows to show",
+      "default": 12
+    },
+    {
+      "name": "density",
+      "type": "select",
+      "label": "Row density",
+      "default": "auto",
+      "choices": [
+        {"value": "auto", "label": "Auto (compact in short cells)"},
+        {"value": "comfortable", "label": "Comfortable (title + details line)"},
+        {"value": "compact", "label": "Compact (one line per item)"}
+      ]
+    },
+    {
+      "name": "show_labels",
+      "type": "boolean",
+      "label": "Show labels",
+      "default": true
+    }
+  ],
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com"
+  ]
+}
