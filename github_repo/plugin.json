@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Repo Card",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "kind": "widget",
   "description": "Single-repo card. Pairs the language split + stars / forks / issues / release stats with a 52-week commit activity sparkline and a top-contributors strip (up to 5, avatar + login + contribution count). Public repos work without a token.",
   "icon": "ph-book-bookmark",
@@ -17,8 +17,9 @@
     {
       "name": "repo",
       "type": "string",
-      "label": "owner/repo",
-      "default": "torvalds/linux"
+      "label": "Repo",
+      "default": "torvalds/linux",
+      "help": "As owner/repo, for example dmellok/tesserae."
     }
   ],
   "render": {

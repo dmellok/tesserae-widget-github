@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Inbox",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "Every open issue, pull request and discussion across the repos you own, in one list. Grouped by repo or by kind, newest activity first or oldest first. Pick repos to leave out, or exclude by pattern (tesserae-widget-*). Add orgs to cover their repos too. Issues and PRs work without a token; discussions need a PAT in Plugins → GitHub Core.",
   "icon": "ph-tray",
@@ -16,14 +16,9 @@
     {
       "name": "user",
       "type": "string",
-      "label": "Username (blank = GitHub Core default)",
-      "default": ""
-    },
-    {
-      "name": "extra_owners",
-      "type": "string",
-      "label": "Also include repos owned by (orgs or users, comma separated)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     },
     {
       "name": "show_issues",
@@ -40,21 +35,9 @@
     {
       "name": "show_discussions",
       "type": "boolean",
-      "label": "Discussions (needs a token)",
-      "default": true
-    },
-    {
-      "name": "exclude_repos",
-      "type": "multiselect",
-      "label": "Repos to leave out",
-      "default": [],
-      "choices_from": "repo"
-    },
-    {
-      "name": "exclude_patterns",
-      "type": "string",
-      "label": "Also leave out (comma separated, * wildcards, e.g. tesserae-widget-*)",
-      "default": ""
+      "label": "Discussions",
+      "default": true,
+      "help": "Needs a token in GitHub Core."
     },
     {
       "name": "group_by",
@@ -62,44 +45,101 @@
       "label": "Group by",
       "default": "repo",
       "choices": [
-        {"value": "repo", "label": "Repository"},
-        {"value": "kind", "label": "Kind (issues, PRs, discussions)"},
-        {"value": "none", "label": "One flat list"}
+        {
+          "value": "repo",
+          "label": "Repository"
+        },
+        {
+          "value": "kind",
+          "label": "Kind (issues, PRs, discussions)"
+        },
+        {
+          "value": "none",
+          "label": "One flat list"
+        }
       ]
+    },
+    {
+      "name": "max_items",
+      "type": "number",
+      "label": "How many",
+      "default": 12,
+      "help": "Rows shown. Rows that do not fit the cell are counted in a +N more footer."
+    },
+    {
+      "name": "extra_owners",
+      "type": "string",
+      "label": "Also include",
+      "default": "",
+      "help": "Orgs or users whose repos join the list, separated by commas.",
+      "advanced": true
+    },
+    {
+      "name": "exclude_repos",
+      "type": "multiselect",
+      "label": "Leave out",
+      "default": [],
+      "advanced": true,
+      "choices_from": "repo",
+      "help": "Repos to skip, picked from your own."
+    },
+    {
+      "name": "exclude_patterns",
+      "type": "string",
+      "label": "Also leave out",
+      "default": "",
+      "help": "Repo names separated by commas, with * as a wildcard, for example tesserae-widget-*.",
+      "advanced": true
     },
     {
       "name": "sort",
       "type": "select",
       "label": "Order",
       "default": "updated",
+      "advanced": true,
       "choices": [
-        {"value": "updated", "label": "Latest activity first"},
-        {"value": "oldest", "label": "Oldest first (the stale ones on top)"},
-        {"value": "newest", "label": "Newest first"}
+        {
+          "value": "updated",
+          "label": "Latest activity first"
+        },
+        {
+          "value": "oldest",
+          "label": "Oldest first (the stale ones on top)"
+        },
+        {
+          "value": "newest",
+          "label": "Newest first"
+        }
       ]
-    },
-    {
-      "name": "max_items",
-      "type": "number",
-      "label": "Rows to show",
-      "default": 12
     },
     {
       "name": "density",
       "type": "select",
       "label": "Row density",
       "default": "auto",
+      "advanced": true,
       "choices": [
-        {"value": "auto", "label": "Auto (compact in short cells)"},
-        {"value": "comfortable", "label": "Comfortable (title + details line)"},
-        {"value": "compact", "label": "Compact (one line per item)"}
+        {
+          "value": "auto",
+          "label": "Auto (compact in short cells)"
+        },
+        {
+          "value": "comfortable",
+          "label": "Comfortable (title + details line)"
+        },
+        {
+          "value": "compact",
+          "label": "Compact (one line per item)"
+        }
       ]
     },
     {
       "name": "show_labels",
       "type": "boolean",
-      "label": "Show labels",
-      "default": true
+      "label": "Labels",
+      "default": true,
+      "help": "The issue and PR labels on each row.",
+      "advanced": true
     }
   ],
   "render": {

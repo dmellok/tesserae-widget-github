@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Activity",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "kind": "widget",
   "description": "Recent public activity for a GitHub user. Pushes / PRs / issues / releases broken out as type-coloured tiles; a 7-day stacked-bar histogram segments each day's events by type and centres a Phosphor glyph on the dominant kind; an activity-streak pill counts consecutive days back from today. Defaults to the username in Plugins \u2192 GitHub Core.",
   "icon": "ph-git-commit",
@@ -16,14 +16,16 @@
     {
       "name": "user",
       "type": "string",
-      "label": "Username (blank = github_core default)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     },
     {
       "name": "max_events",
       "type": "number",
-      "label": "Max events",
-      "default": 10
+      "label": "How many",
+      "default": 10,
+      "help": "Events shown, newest first."
     }
   ],
   "render": {

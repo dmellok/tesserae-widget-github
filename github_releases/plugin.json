@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Releases",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "kind": "widget",
   "description": "Latest releases from a list of watched repos. Each row carries a SemVer bump chip (MAJOR / MINOR / PATCH, computed by comparing the tag to the previous release) and, for the most recent release per repo, a +N commits tail counting unreleased commits on the default branch. Useful for tracking your dependencies' versions.",
   "icon": "ph-tag",
@@ -16,14 +16,16 @@
     {
       "name": "repos",
       "type": "textarea",
-      "label": "Repos (one per line, owner/repo)",
-      "default": "torvalds/linux\nvercel/next.js"
+      "label": "Repos",
+      "default": "torvalds/linux\nvercel/next.js",
+      "help": "One per line, as owner/repo."
     },
     {
       "name": "max_results",
       "type": "number",
-      "label": "Max releases per repo",
-      "default": 1
+      "label": "How many per repo",
+      "default": 1,
+      "help": "Releases shown for each repo."
     }
   ],
   "render": {

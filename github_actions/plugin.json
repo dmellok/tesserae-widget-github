@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Actions",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "kind": "widget",
   "description": "Most recent CI runs across watched repos. Each workflow row pairs its conclusion icon + a workflow-type glyph (build / test / deploy / lint / docs / release / security / ci) with a mini timeline of the last 8 runs (bar height \u221d duration, colour \u221d conclusion) and the latest run's duration. Public repos work without a token; private repos require the PAT in Plugins \u2192 GitHub Core.",
   "icon": "ph-play-circle",
@@ -16,14 +16,16 @@
     {
       "name": "repos",
       "type": "textarea",
-      "label": "Repos (one per line, owner/repo)",
-      "default": ""
+      "label": "Repos",
+      "default": "",
+      "help": "One per line, as owner/repo."
     },
     {
       "name": "max_results",
       "type": "number",
-      "label": "Max workflows per repo",
-      "default": 3
+      "label": "How many per repo",
+      "default": 3,
+      "help": "Workflows shown for each repo."
     }
   ],
   "render": {

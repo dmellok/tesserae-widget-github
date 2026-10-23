@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, CI Status",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "Full-bleed CI status banner across one or more watched repos. Renders ALL GREEN, N FAILING, or N RUNNING as the hero, with the failing repos called out by name. Useful as a big-mode complement to GitHub Actions: this is the at-a-glance answer to 'is anything red right now'. Public repos work without a token.",
   "icon": "ph-traffic-cone",
@@ -10,8 +10,9 @@
     {
       "name": "repos",
       "type": "textarea",
-      "label": "Repos to watch (owner/repo, one per line)",
-      "default": "dmellok/tesserae"
+      "label": "Repos",
+      "default": "dmellok/tesserae",
+      "help": "One per line, as owner/repo."
     }
   ],
   "render": { "dither": "none", "needs_network": true, "full_bleed": true },

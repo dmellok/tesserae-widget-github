@@ -22,7 +22,7 @@ Bundle of 15 widgets:
 
 ### GitHub Inbox
 
-Lists what is open across every repo the configured user owns. Issues and pull requests come from the REST search API and work without a token (at GitHub's unauthenticated rate limit); discussions come from the GraphQL API and need a token in GitHub Core. Options: extra owners or orgs to include, which kinds to show, repos to leave out (a picker filled from your repos, plus a free-text list that takes `*` wildcards such as `tesserae-widget-*`), grouping (repo, kind, flat), order (latest activity, oldest first, newest first), row cap, row density, labels on or off. Rows that do not fit the cell are dropped and counted in a "+N more" footer.
+Lists what is open across every repo the configured user owns. Issues and pull requests come from the REST search API and work without a token (at GitHub's unauthenticated rate limit); discussions come from the GraphQL API and need a token in GitHub Core. Options: extra owners or orgs to include, which kinds to show, repos to leave out (a picker filled from your repos, plus a free-text list that takes `*` wildcards such as `tesserae-widget-*`), grouping (repo, kind, flat), order (latest activity, oldest first, newest first), row cap, row density, labels on or off. The kinds, grouping and row cap sit up front; the owners, exclusions, order, density and labels are under More options. Rows that do not fit the cell are dropped and counted in a "+N more" footer.
 
 Tests: `python -m pytest github_inbox/tests` and `node github_inbox/tests/check.mjs`.
 

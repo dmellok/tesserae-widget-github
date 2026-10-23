@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Star Growth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "Cumulative star-count curve for a single repo, headline shows the current total. Pulls per-stargazer timestamps via the GitHub stargazers endpoint (custom Accept header) and resamples them into the chosen window (30 / 90 / 365 days). Reaches up to 4000 stargazers to keep the response tight; older history is approximated as a single anchor point. Public repos work without a token, large repos benefit hugely from one.",
   "icon": "ph-trend-up",
@@ -10,8 +10,9 @@
     {
       "name": "repo",
       "type": "string",
-      "label": "owner/repo",
-      "default": "dmellok/tesserae"
+      "label": "Repo",
+      "default": "dmellok/tesserae",
+      "help": "As owner/repo, for example dmellok/tesserae."
     },
     {
       "name": "window_days",
@@ -19,10 +20,20 @@
       "label": "Window",
       "default": 90,
       "choices": [
-        { "value": 30, "label": "30 days" },
-        { "value": 90, "label": "90 days" },
-        { "value": 365, "label": "1 year" }
-      ]
+        {
+          "value": 30,
+          "label": "30 days"
+        },
+        {
+          "value": 90,
+          "label": "90 days"
+        },
+        {
+          "value": 365,
+          "label": "1 year"
+        }
+      ],
+      "help": "How far back the star count is charted."
     }
   ],
   "render": { "dither": "none", "needs_network": true },

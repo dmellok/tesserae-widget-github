@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Activity Heatmap",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "12-week events heatmap (commits + PRs + issues + releases). Same grid shape as the GitHub contributions calendar but driven by the public events feed, so it reads activity rather than contribution credit. Three pills above show this week's totals by type. Token optional but raises the rate limit; public events only.",
   "icon": "ph-grid-four",
@@ -10,8 +10,9 @@
     {
       "name": "user",
       "type": "string",
-      "label": "GitHub username (blank uses the default from GitHub Core)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     }
   ],
   "render": { "dither": "none", "needs_network": true },

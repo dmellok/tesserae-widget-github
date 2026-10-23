@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Streak",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "Current contribution streak as a hero number. Background colour shifts at the 7, 30, and 100 day thresholds so a long streak reads at a glance. Adds longest-streak and today's contribution count below. Token required (uses the contributionCalendar GraphQL endpoint).",
   "icon": "ph-flame",
@@ -10,8 +10,9 @@
     {
       "name": "user",
       "type": "string",
-      "label": "GitHub username (blank uses the default from GitHub Core)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     }
   ],
   "render": { "dither": "none", "needs_network": true },

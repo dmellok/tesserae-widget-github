@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, PR Queue",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "kind": "widget",
   "description": "Your open PRs + PRs awaiting your review. Each row leads with a draft / ready-for-review glyph, carries a PR-age chip (muted \u2192 ochre \u2192 terracotta \u2192 plum as the PR ages), and a comment-bubble chip showing discussion activity. Sections are sorted oldest-first so the staler PR floats to the top. Requires a PAT in Plugins \u2192 GitHub Core.",
   "icon": "ph-git-pull-request",
@@ -16,14 +16,16 @@
     {
       "name": "user",
       "type": "string",
-      "label": "Username (blank = github_core default)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     },
     {
       "name": "max_results",
       "type": "number",
-      "label": "Max PRs per section",
-      "default": 6
+      "label": "How many per section",
+      "default": 6,
+      "help": "PRs shown in each section."
     }
   ],
   "render": {

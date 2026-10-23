@@ -1,7 +1,7 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, PR Count",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "kind": "widget",
   "description": "Hero number: total open PRs across your authored set plus PRs awaiting your review. Splits the count into a primary tile (everything that needs attention) and two sub-counts (yours / review-requested). Background colour shifts amber when any PR has been open more than seven days. Token required (search API needs auth).",
   "icon": "ph-git-pull-request",
@@ -10,16 +10,18 @@
     {
       "name": "user",
       "type": "string",
-      "label": "GitHub username (blank uses the default from GitHub Core)",
-      "default": ""
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username set in GitHub Core."
     },
     {
       "name": "stale_days",
       "type": "number",
-      "label": "Stale threshold (days)",
+      "label": "Stale after",
       "default": 7,
       "min": 1,
-      "max": 90
+      "max": 90,
+      "help": "Days an open PR can wait before it shows as stale."
     }
   ],
   "render": { "dither": "none", "needs_network": true },
