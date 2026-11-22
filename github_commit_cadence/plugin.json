@@ -5,8 +5,22 @@
   "kind": "widget",
   "description": "Daily commit bars for the last 30 days on a single repo. Headline is the weekly average across the window, with totals for the last 7 and 30 days called out below. Pulls the stats/commit_activity endpoint (52 weeks × 7 days); the widget self-heals while GitHub is still computing the stats. Public repos work without a token.",
   "icon": "ph-chart-bar",
-  "supports": { "sizes": ["sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
     {
       "name": "repo",
       "type": "string",
@@ -15,6 +29,12 @@
       "help": "As owner/repo, for example dmellok/tesserae."
     }
   ],
-  "render": { "dither": "none", "needs_network": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

@@ -5,16 +5,37 @@
   "kind": "widget",
   "description": "Hero number: total stars across every public repo the user owns. Adds a 30-day cumulative sparkline that fills in as the widget renders over time (each fetch snapshots the day's total so the chart accumulates a real history rather than depending on per-stargazer pagination). Shows the top three star-earning repos below the headline. Token required (uses GitHub's GraphQL API).",
   "icon": "ph-star",
-  "supports": { "sizes": ["xs", "sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "xs",
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account."
+    },
     {
       "name": "user",
       "type": "string",
       "label": "Username",
       "default": "",
-      "help": "Blank uses the username set in GitHub Core."
+      "help": "Blank uses the username of the selected GitHub account."
     }
   ],
-  "render": { "dither": "none", "needs_network": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

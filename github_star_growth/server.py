@@ -1,17 +1,4 @@
-"""github_star_growth, cumulative star history for one repo.
-
-GitHub's /stargazers endpoint can return per-star timestamps when the
-custom Accept header is set. We paginate the tail (most recent
-stargazers first by reverse-walking from the last page) until we
-cover the requested window or run out of budget, then resample to a
-daily cumulative series anchored at the repo's current
-stargazer_count.
-
-The full per-star history isn't pulled for hot repos (could be
-hundreds of thousands of stargazers); we cap at PAGE_BUDGET pages of
-100 stars each and fall back to a single "rest" anchor at the
-window's start when the cap is hit.
-"""
+"""github_star_growth, cumulative star history for one repo."""
 
 from __future__ import annotations
 
@@ -34,11 +21,21 @@ STAR_ACCEPT = "application/vnd.github.star+json"
 
 
 def _core() -> Any:
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=False))
 
 
 def _last_page_url(link_header: str) -> str | None:
-    """Parse the GitHub Link header to find the rel=\"last\" URL."""
     if not link_header:
         return None
     for part in link_header.split(","):
@@ -59,12 +56,15 @@ def _last_page_number(url: str | None) -> int:
         return 1
 
 
-def _fetch_page(core: Any, repo: str, page: int) -> tuple[list[dict[str, Any]], str]:
-    url = (
-        f"https://api.github.com/repos/{repo}/stargazers"
-        f"?per_page={PER_PAGE}&page={page}"
+def _fetch_page(
+    core: Any, repo: str, page: int, *, account_id: str | None
+) -> tuple[list[dict[str, Any]], str]:
+    url = f"https://api.github.com/repos/{repo}/stargazers?per_page={PER_PAGE}&page={page}"
+    req = urllib.request.Request(
+        url,
+        headers=core.headers(accept=STAR_ACCEPT, account_id=account_id),
+        method="GET",
     )
-    req = urllib.request.Request(url, headers=core.headers(accept=STAR_ACCEPT), method="GET")
     with urllib.request.urlopen(req, timeout=12) as resp:
         link = resp.headers.get("Link") or ""
         body = resp.read().decode("utf-8")
@@ -78,9 +78,6 @@ def _build_series(
     today: datetime,
     starting_count: int,
 ) -> list[dict[str, Any]]:
-    """Resample raw star timestamps into a daily cumulative series
-    from window_start to today. starting_count is the count at
-    window_start (i.e. before any of the captured stars)."""
     by_day: dict[str, int] = {}
     for ts in stars_timeline:
         try:
@@ -116,33 +113,40 @@ def fetch(
     window_days = max(7, min(365, window_days))
 
     core = _core()
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget."}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=False)
+    except Exception as err:
+        return {"error": core.coerce_error(err)}
+    account_name = str((account or {}).get("name") or "")
+    acct_key = str((account or {}).get("id") or "public")
+
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    safe = repo.replace("/", "__")
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{acct_key}_{repo.replace('/', '__')}")
     cache = data_dir / f"star_growth_{safe}_{window_days}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             return json.loads(cache.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Get repo metadata for the current total + a sanity check.
     try:
-        info = core.request_json(f"https://api.github.com/repos/{repo}")
+        info = core.request_json(f"https://api.github.com/repos/{repo}", account_id=account_id)
     except Exception as err:
-        return {"error": core.coerce_error(err)}
+        return {"error": core.coerce_error(err, account_name=account_name, repo=repo)}
 
     total_stars = int(info.get("stargazers_count") or 0)
     if total_stars == 0:
         return {"repo": repo, "total_stars": 0, "series": [], "truncated": False}
 
-    # Walk pages from the END backwards (the last page has the newest
-    # stargazers). We need to know the last page number, which means
-    # one initial request to read the Link header.
     try:
-        first, link = _fetch_page(core, repo, 1)
+        first, link = _fetch_page(core, repo, 1, account_id=account_id)
     except Exception as err:
-        return {"error": core.coerce_error(err)}
+        return {"error": core.coerce_error(err, account_name=account_name, repo=repo)}
 
     last_page = _last_page_number(_last_page_url(link)) or 1
     today = datetime.now(UTC)
@@ -151,14 +155,13 @@ def fetch(
     pages_walked = 0
     crossed_window = False
 
-    # Walk from last_page down to page 1 (or the budget cap).
     page = last_page
     while page >= 1 and pages_walked < PAGE_BUDGET:
         if page == 1:
             entries = first
         else:
             try:
-                entries, _ = _fetch_page(core, repo, page)
+                entries, _ = _fetch_page(core, repo, page, account_id=account_id)
             except Exception:
                 break
         pages_walked += 1
@@ -178,7 +181,6 @@ def fetch(
             break
         page -= 1
 
-    # Stars older than the window form the baseline at window_start.
     starting_count = total_stars - len(timestamps)
     series = _build_series(
         timestamps,

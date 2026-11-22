@@ -33,6 +33,16 @@ function tierFor(streak) {
   return { color: "var(--text-muted)", glyph: "ph-circle-dashed" };
 }
 
+const PUBLIC_ONLY_HINT =
+  "This account is a GitHub App installation, so private contributions may be missing. " +
+  "Authorize a user on this app in GitHub Core to include them.";
+
+function publicOnlyIcon(data) {
+  if (!data.public_only) return "";
+  return `<i class="ph-bold ph-eye-slash" style="color:var(--text-secondary)" role="img"
+    aria-label="${escapeHtml(PUBLIC_ONLY_HINT)}" title="${escapeHtml(PUBLIC_ONLY_HINT)}"></i>`;
+}
+
 export default function render(shadow, ctx) {
   const data = ctx?.data ?? {};
   const css = `<link rel="stylesheet" href="/static/style/spectra-widgets.css">`;
@@ -65,6 +75,7 @@ export default function render(shadow, ctx) {
         <i class="ph-bold ${tier.glyph}" style="color:${tier.color}"></i>
         <h3>Streak</h3>
         ${todayChip}
+        ${publicOnlyIcon(data)}
       </div>
       <div class="w-body status-body">
         <div class="status-hero">

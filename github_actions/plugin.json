@@ -1,9 +1,9 @@
 {
   "tesserae_compat": "1.x",
   "name": "GitHub, Actions",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "kind": "widget",
-  "description": "Most recent CI runs across watched repos. Each workflow row pairs its conclusion icon + a workflow-type glyph (build / test / deploy / lint / docs / release / security / ci) with a mini timeline of the last 8 runs (bar height \u221d duration, colour \u221d conclusion) and the latest run's duration. Public repos work without a token; private repos require the PAT in Plugins \u2192 GitHub Core.",
+  "description": "Most recent CI runs across watched repos. Each workflow row pairs its conclusion icon + a workflow-type glyph (build / test / deploy / lint / docs / release / security / ci) with a mini timeline of the last 8 runs (bar height ∝ duration, colour ∝ conclusion) and the latest run's duration. With no repos listed, it scans the account's most recently pushed repos (capped by Max repos to scan). Public repos work without a token; private repos require the PAT in Plugins → GitHub Core.",
   "icon": "ph-play-circle",
   "supports": {
     "sizes": [
@@ -14,11 +14,19 @@
   },
   "cell_options": [
     {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
+    {
       "name": "repos",
       "type": "textarea",
       "label": "Repos",
       "default": "",
-      "help": "One per line, as owner/repo."
+      "help": "One per line, as owner/repo. Leave blank to scan the account's most recently pushed repos."
     },
     {
       "name": "max_results",
@@ -26,6 +34,14 @@
       "label": "How many per repo",
       "default": 3,
       "help": "Workflows shown for each repo."
+    },
+    {
+      "name": "max_repos",
+      "type": "number",
+      "label": "Max repos to scan",
+      "default": 10,
+      "help": "Only used when Repos is blank: how many of the most recently pushed repos to check (1-30). Each repo costs one API call per refresh.",
+      "advanced": true
     }
   ],
   "render": {
@@ -33,6 +49,7 @@
     "needs_network": true
   },
   "requires": [
-    "network:api.github.com"
+    "network:api.github.com",
+    "plugin:github_core"
   ]
 }

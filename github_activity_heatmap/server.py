@@ -1,12 +1,4 @@
-"""github_activity_heatmap, 12-week public-events heatmap.
-
-Walks /users/{user}/events/public over up to PAGE_BUDGET pages of
-100, bucketing each event by UTC day. The events feed only reaches
-back about 90 days (and ~300 entries for unauthenticated calls), so
-the 12-week window is a natural fit. Day cells get a quantile level
-0-4 so the renderer can paint with the Spectra accent ramp the same
-way github_contributions does.
-"""
+"""github_activity_heatmap, 12-week public-events heatmap."""
 
 from __future__ import annotations
 
@@ -23,7 +15,7 @@ CACHE_TTL_S = 600
 PAGE_BUDGET = 6
 PER_PAGE = 100
 USERNAME_RE = re.compile(r"^[A-Za-z0-9-]{1,39}$")
-WINDOW_DAYS = 84  # 12 full weeks
+WINDOW_DAYS = 84
 
 TYPE_BUCKET = {
     "PushEvent": "commits",
@@ -38,13 +30,21 @@ TYPE_BUCKET = {
 
 
 def _core() -> Any:
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=False))
 
 
 def _level(count: int, breakpoints: list[int]) -> int:
-    """Map a day's count to a 0..4 level using the supplied breakpoints
-    (which we compute from the percentiles of the actual data so a
-    quiet user's busiest day still shows a fourth-quartile cell)."""
     if count <= 0:
         return 0
     for idx, bp in enumerate(breakpoints, start=1):
@@ -54,26 +54,20 @@ def _level(count: int, breakpoints: list[int]) -> int:
 
 
 def _breakpoints(counts: list[int]) -> list[int]:
-    """Quartile-ish breakpoints from non-zero counts. Returns three
-    thresholds so [0, b1, b2, b3, b4] maps to levels 0..4."""
     nz = sorted(c for c in counts if c > 0)
     if not nz:
         return [1, 2, 3]
     n = len(nz)
 
     def q(p: float) -> int:
-        idx = max(0, min(n - 1, int(round(p * (n - 1)))))
+        idx = max(0, min(n - 1, round(p * (n - 1))))
         return nz[idx]
 
     return [q(0.33), q(0.66), q(0.95)]
 
 
 def _grid(by_day: dict[str, dict[str, int]], today: datetime) -> list[list[dict[str, Any]]]:
-    """Build a 12 (cols, weeks oldest→newest) × 7 (rows, Mon-Sun) grid
-    of day cells. Each cell has total count, per-type breakdown, and a
-    level 0-4 once breakpoints are applied."""
     start = (today - timedelta(days=WINDOW_DAYS - 1)).date()
-    # Align to Monday so the rows read as days-of-week.
     while start.weekday() != 0:
         start -= timedelta(days=1)
 
@@ -111,16 +105,39 @@ def fetch(
 ) -> dict[str, Any]:
     del settings
     core = _core()
-    user = (options.get("user") or "").strip() or core.get_username()
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget."}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=False)
+    except Exception as err:
+        return {"error": core.coerce_error(err)}
+    account_name = str((account or {}).get("name") or "")
+    acct_key = str((account or {}).get("id") or "public")
+
+    explicit_user = (options.get("user") or "").strip().lstrip("@")
+    user = explicit_user or core.get_username(account_id)
     if not user:
-        return {"error": "Set a GitHub username, here or as github_core default."}
+        return {
+            "error": (
+                "No GitHub username set. Enter a username in widget options or connect an "
+                "account in GitHub Core (/plugins/github_core/)."
+            )
+        }
     if not USERNAME_RE.match(user):
         return {"error": f"'{user}' isn't a valid GitHub username."}
 
+    is_org_events = (
+        not explicit_user and str((account or {}).get("account_type") or "").lower() == "organization"
+    )
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    cache = data_dir / f"activity_heatmap_{user}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    safe_key = re.sub(
+        r"[^A-Za-z0-9_.-]", "_", f"{acct_key}_{'org' if is_org_events else 'user'}_{user}"
+    )
+    cache = data_dir / f"activity_heatmap_{safe_key}.json"
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             return json.loads(cache.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -134,12 +151,16 @@ def fetch(
     fetched = 0
 
     for page in range(1, PAGE_BUDGET + 1):
-        url = f"https://api.github.com/users/{user}/events/public?per_page={PER_PAGE}&page={page}"
+        url = (
+            f"https://api.github.com/orgs/{user}/events?per_page={PER_PAGE}&page={page}"
+            if is_org_events
+            else f"https://api.github.com/users/{user}/events/public?per_page={PER_PAGE}&page={page}"
+        )
         try:
-            events = core.request_json(url)
+            events = core.request_json(url, account_id=account_id)
         except Exception as err:
             if page == 1:
-                return {"error": core.coerce_error(err)}
+                return {"error": core.coerce_error(err, account_name=account_name, user=user)}
             break
         if not isinstance(events, list) or not events:
             break
@@ -166,8 +187,6 @@ def fetch(
             repo_name = (event.get("repo") or {}).get("name")
             if repo_name:
                 by_repo[repo_name] = by_repo.get(repo_name, 0) + 1
-        # Stop walking pages once the oldest event we saw drops past
-        # our window.
         if oldest_in_page and oldest_in_page < cutoff:
             break
 

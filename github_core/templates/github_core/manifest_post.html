@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting to GitHub…</title>
+</head>
+<body style="font-family: system-ui, sans-serif; padding: 2rem; max-width: 560px;">
+  {% if prev_created %}
+  <p style="color: #0d8c7e; font-weight: 600;">Created GitHub App '{{ prev_created }}'.</p>
+  {% endif %}
+  {% if total and total > 1 %}
+  <p>Redirecting to GitHub to create GitHub App <strong>{{ step }} of {{ total }}</strong>{% if app_name %}: <strong>{{ app_name }}</strong>{% endif %}{% if org %} (org <code>@{{ org }}</code>){% endif %}…</p>
+  {% else %}
+  <p>Redirecting to GitHub to create your GitHub App{% if app_name %} <strong>{{ app_name }}</strong>{% endif %}…</p>
+  {% endif %}
+  <form id="gh-manifest-form" method="post" action="{{ action_url }}">
+    <input type="hidden" name="manifest" value="{{ manifest_json }}">
+    <noscript>
+      <button type="submit">Continue to GitHub</button>
+    </noscript>
+  </form>
+  {% if cancel_url and total and total > 1 %}
+  <p style="margin-top: 1.5rem; font-size: 0.9rem;">
+    <a href="{{ cancel_url }}">Cancel remaining and return to GitHub Core</a>
+  </p>
+  {% endif %}
+  <script>document.getElementById("gh-manifest-form").submit();</script>
+</body>
+</html>

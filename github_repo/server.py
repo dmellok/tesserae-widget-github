@@ -15,8 +15,19 @@ CACHE_TTL_S = 600
 SAFE_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 
 
-def _core():
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+def _core() -> Any:
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=False))
 
 
 def fetch(
@@ -26,43 +37,49 @@ def fetch(
     repo = (options.get("repo") or "").strip()
     if not SAFE_RE.match(repo):
         return {"error": "Set repo as 'owner/repo' (e.g. torvalds/linux)."}
+
     core = _core()
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget."}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=False)
+    except Exception as err:
+        return {"error": core.coerce_error(err)}
+    account_name = str((account or {}).get("name") or "")
+    acct_key = str((account or {}).get("id") or "public")
+
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    safe = repo.replace("/", "__")
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{acct_key}_{repo.replace('/', '__')}")
     cache = data_dir / f"repo_{safe}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             cached = json.loads(cache.read_text(encoding="utf-8"))
-            # Self-heal a previously cached "stats computing" result so
-            # the user doesn't have to wait out the full 10-minute TTL
-            # once GitHub's done. An active repo with zero commit_weeks
-            # is unrealistic, so refetch in that case.
             if cached.get("commit_weeks"):
                 return cached
         except (json.JSONDecodeError, OSError):
             pass
-    # Tracks whether commit_activity came back from GitHub's async stats
-    # endpoint as a "still computing" 202. If so, we skip writing the
-    # cache so the next render picks up the real data instead of
-    # serving "No commit activity" for 10 minutes.
+
     activity_pending = False
     try:
-        info = core.request_json(f"https://api.github.com/repos/{repo}")
+        info = core.request_json(f"https://api.github.com/repos/{repo}", account_id=account_id)
         try:
-            releases = core.request_json(f"https://api.github.com/repos/{repo}/releases/latest")
+            releases = core.request_json(
+                f"https://api.github.com/repos/{repo}/releases/latest", account_id=account_id
+            )
         except Exception:
             releases = None
         try:
-            langs = core.request_json(f"https://api.github.com/repos/{repo}/languages")
+            langs = core.request_json(
+                f"https://api.github.com/repos/{repo}/languages", account_id=account_id
+            )
         except Exception:
             langs = {}
         try:
-            # 52-week commit activity, list of {"week", "total", "days"}.
-            # First request often returns 202 (computing); the next hit
-            # has the data.
             activity = core.request_json(
-                f"https://api.github.com/repos/{repo}/stats/commit_activity"
+                f"https://api.github.com/repos/{repo}/stats/commit_activity", account_id=account_id
             )
         except core.GithubAcceptedError:
             activity = []
@@ -70,17 +87,15 @@ def fetch(
         except Exception:
             activity = []
         try:
-            # Top contributors, login + avatar + contribution count.
             contributors = core.request_json(
-                f"https://api.github.com/repos/{repo}/contributors?per_page=6"
+                f"https://api.github.com/repos/{repo}/contributors?per_page=6",
+                account_id=account_id,
             )
         except Exception:
             contributors = []
     except Exception as err:
-        return {"error": core.coerce_error(err)}
+        return {"error": core.coerce_error(err, account_name=account_name, repo=repo)}
 
-    # Language breakdown, top-5 by byte count + an "Other" rollup so
-    # the bar sums to 100% without the long-tail dominating.
     lang_items: list[dict[str, Any]] = []
     if isinstance(langs, dict) and langs:
         total = sum(int(v) for v in langs.values()) or 1
@@ -127,9 +142,6 @@ def fetch(
         "busiest_week": max(commit_weeks) if commit_weeks else 0,
         "contributors": contrib_items,
     }
-    # Don't cache while the commit_activity stats are still being
-    # computed by GitHub, that'd lock in an empty bars chart for
-    # 10 minutes when the answer is on its way.
     if not activity_pending:
         with contextlib.suppress(OSError):
             cache.write_text(json.dumps(result), encoding="utf-8")

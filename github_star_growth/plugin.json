@@ -5,8 +5,22 @@
   "kind": "widget",
   "description": "Cumulative star-count curve for a single repo, headline shows the current total. Pulls per-stargazer timestamps via the GitHub stargazers endpoint (custom Accept header) and resamples them into the chosen window (30 / 90 / 365 days). Reaches up to 4000 stargazers to keep the response tight; older history is approximated as a single anchor point. Public repos work without a token, large repos benefit hugely from one.",
   "icon": "ph-trend-up",
-  "supports": { "sizes": ["sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
     {
       "name": "repo",
       "type": "string",
@@ -36,6 +50,12 @@
       "help": "How far back the star count is charted."
     }
   ],
-  "render": { "dither": "none", "needs_network": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

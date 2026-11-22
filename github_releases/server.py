@@ -16,8 +16,19 @@ REPO_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 SEMVER_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 
 
-def _core():
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+def _core() -> Any:
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=False))
 
 
 def _parse_semver(tag: str) -> tuple[int, int, int] | None:
@@ -48,50 +59,58 @@ def fetch(
     if not repos:
         return {"error": "Add one or more repos (owner/repo, one per line).", "releases": []}
 
-    max_per = max(1, int(options.get("max_results") or 1))
     core = _core()
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget.", "releases": []}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=False)
+    except Exception as err:
+        return {"error": core.coerce_error(err), "releases": []}
+    account_name = str((account or {}).get("name") or "")
+    acct_key = str((account or {}).get("id") or "public")
+
+    max_per = max(1, int(options.get("max_results") or 1))
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    # v2 cache key, bump because the payload shape grew (bump_type +
-    # commits_since fields). Without the bump, a stale v1 cache would
-    # keep serving until TTL expires.
-    key = re.sub(r"[^A-Za-z0-9]", "_", f"{','.join(repos)}_{max_per}")[:120]
+    key = re.sub(r"[^A-Za-z0-9]", "_", f"{acct_key}_{','.join(repos)}_{max_per}")[:120]
     cache = data_dir / f"rel_v2_{key}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             return json.loads(cache.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
 
     out: list[dict[str, Any]] = []
+    errors: list[str] = []
     for repo in repos:
-        # +1 release so we can derive the SemVer bump kind by comparing
-        # to the next-older one. We drop the extra from the displayed
-        # list later.
         try:
             rels = core.request_json(
-                f"https://api.github.com/repos/{repo}/releases?per_page={max_per + 1}"
+                f"https://api.github.com/repos/{repo}/releases?per_page={max_per + 1}",
+                account_id=account_id,
             )
-        except Exception:
-            rels = []
+        except Exception as err:
+            errors.append(core.coerce_error(err, account_name=account_name, repo=repo))
+            continue
         rels = list(rels or [])
 
-        # commits_since for the LATEST release only, that's the row
-        # the user actually scans for "do I need to update?". Computing
-        # for older releases would burn the API rate limit for stale
-        # info nobody reads.
         commits_since_latest: int | None = None
         default_branch: str | None = None
         if rels:
             try:
-                repo_meta = core.request_json(f"https://api.github.com/repos/{repo}")
+                repo_meta = core.request_json(
+                    f"https://api.github.com/repos/{repo}",
+                    account_id=account_id,
+                )
                 default_branch = repo_meta.get("default_branch") or "main"
             except Exception:
                 default_branch = "main"
             try:
                 cmp_payload = core.request_json(
                     f"https://api.github.com/repos/{repo}/compare/"
-                    f"{rels[0].get('tag_name')}...{default_branch}"
+                    f"{rels[0].get('tag_name')}...{default_branch}",
+                    account_id=account_id,
                 )
                 tot = cmp_payload.get("total_commits")
                 if isinstance(tot, int):
@@ -120,8 +139,14 @@ def fetch(
                 entry["commits_since"] = commits_since_latest
                 entry["default_branch"] = default_branch
             out.append(entry)
+
+    if not out and errors:
+        return {"error": errors[0], "releases": []}
+
     out.sort(key=lambda r: r.get("published_at") or "", reverse=True)
-    result = {"releases": out}
+    result: dict[str, Any] = {"releases": out}
+    if errors:
+        result["errors"] = errors
     with contextlib.suppress(OSError):
         cache.write_text(json.dumps(result), encoding="utf-8")
     return result

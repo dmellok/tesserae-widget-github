@@ -1,0 +1,641 @@
+{% extends "_base.html" %}
+{% from "_components.html" import card_head, button, empty_state %}
+{% block title %}GitHub Accounts, Tesserae{% endblock %}
+
+{% block main %}
+<div class="page-head">
+  <h1><i class="ph-bold ph-github-logo" aria-hidden="true"></i> GitHub Accounts</h1>
+  <p class="page-blurb">Create and manage multiple GitHub Apps, organization installations, user accounts, and Personal Access Tokens (PATs) shared by all <code>github_*</code> widgets. All credentials are encrypted at rest with Tesserae's <code>SecretBox</code>. Every widget lets you pick which account to use, or leave it on Default.</p>
+</div>
+
+{% if legacy and legacy.token and not accounts %}
+<section class="card gh-legacy-banner">
+  <p style="margin:0">
+    <strong>Legacy GitHub Core token active</strong>{% if legacy.username %} (<code>@{{ legacy.username }}</code>){% endif %}: your existing widgets keep working automatically. Connect one or more GitHub Apps or PATs below to unlock multi-account support.
+  </p>
+</section>
+{% endif %}
+
+<section id="gh-accounts" data-collapsible class="card">
+  {{ card_head('Connected GitHub Accounts', icon_name='users-three', level=2, collapse='gh-accounts') }}
+  <div id="gh-accounts-body" data-collapsible-body>
+    {% if accounts %}
+    <div class="gh-toolbar">
+      <div class="gh-summary">
+        <span class="gh-chip gh-chip--muted">{{ accounts|length }} account{{ 's' if accounts|length != 1 }}</span>
+        <span class="gh-chip gh-chip--muted">{{ apps|length }} GitHub App{{ 's' if apps|length != 1 }}</span>
+        <span class="gh-chip gh-chip--muted">{{ pat_accounts|length }} PAT{{ 's' if pat_accounts|length != 1 }}</span>
+      </div>
+      {% if accounts|length > 1 %}
+      <form method="post" action="{{ url_for('github_core_admin.test_all_accounts_route') }}" class="inline">
+        <button type="submit" class="ghost" title="Test live GitHub API access for every account">
+          <i class="ph ph-plugs-connected" aria-hidden="true"></i>
+          <span>Test all</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    <ul class="gh-list">
+      {% for acc in accounts %}
+      <li class="gh-row">
+        <span class="gh-name">
+          <span class="gh-name-line">
+            <span class="gh-name-text">{{ acc.name }}</span>
+            {% if loop.first %}
+            <span class="gh-chip gh-chip--default">Default</span>
+            {% endif %}
+            <span class="gh-chip gh-chip--type">{{ acc.auth_label }}</span>
+            {% if acc.pat_kind %}
+            <span class="gh-chip gh-chip--muted">{{ acc.pat_kind }}</span>
+            {% endif %}
+            {% if acc.username %}
+            <span class="gh-chip gh-chip--ok">@{{ acc.username }}</span>
+            {% else %}
+            <span class="gh-chip gh-chip--muted">not tested yet</span>
+            {% endif %}
+            {% if acc.secret_unreadable %}
+            <span class="gh-chip gh-chip--warn">credentials unreadable, reconnect</span>
+            {% elif acc.masked_secret %}
+            <span class="gh-pat">{{ acc.masked_secret }}</span>
+            {% endif %}
+          </span>
+          <span class="gh-meta">
+            <span class="gh-id">{{ acc.id }}</span>
+            {% if acc.app_name %}<span>· App: {{ acc.app_name }}</span>{% endif %}
+            {% if acc.repositories_selection %}<span>· Repos: {{ acc.repositories_selection }}</span>{% endif %}
+          </span>
+          {% if acc.last_error %}
+          <span class="gh-err">{{ acc.last_error }}</span>
+          {% endif %}
+        </span>
+        <div class="gh-actions">
+          {% if not loop.first %}
+          <form method="post" action="{{ url_for('github_core_admin.set_default_account_route', account_id=acc.id) }}" class="inline">
+            <button type="submit" class="ghost" title="Use this account as the Default for widgets">
+              <i class="ph ph-star" aria-hidden="true"></i>
+              <span>Set default</span>
+            </button>
+          </form>
+          {% endif %}
+          <button type="button" class="ghost" title="Edit account"
+                  onclick="var el = document.getElementById('gh-edit-{{ acc.id }}'); el.hidden = !el.hidden;">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+          </button>
+          <form method="post" action="{{ url_for('github_core_admin.delete_account_route', account_id=acc.id) }}" class="inline"
+                onsubmit="return confirm('Delete GitHub Account {{ acc.name }}?');">
+            <button type="submit" class="ghost danger" title="Delete account">
+              <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('github_core_admin.test_account_route', account_id=acc.id) }}" class="inline">
+            <button type="submit" class="button" title="Test live GitHub API access">
+              <i class="ph ph-plugs-connected" aria-hidden="true"></i>
+              <span>Test</span>
+            </button>
+          </form>
+        </div>
+        <div class="gh-edit" id="gh-edit-{{ acc.id }}" hidden>
+          <form method="post" action="{{ url_for('github_core_admin.edit_account_route', account_id=acc.id) }}" class="form">
+            <div class="field-grid">
+              <div class="field" style="flex:1;">
+                <label for="gh-edit-name-{{ acc.id }}">Account name</label>
+                <input type="text" id="gh-edit-name-{{ acc.id }}" name="name" value="{{ acc.name }}" required autocomplete="off">
+              </div>
+              {% if acc.auth_type == 'pat' %}
+              <div class="field" style="flex:1;">
+                <label for="gh-edit-user-{{ acc.id }}">Username (optional)</label>
+                <input type="text" id="gh-edit-user-{{ acc.id }}" name="username" value="{{ acc.username }}" placeholder="Auto-detected on test" autocomplete="off">
+              </div>
+              <div class="field" style="flex:2;">
+                <label for="gh-edit-pat-{{ acc.id }}">Personal Access Token</label>
+                <input type="password" id="gh-edit-pat-{{ acc.id }}" name="pat" placeholder="Leave blank to keep existing token" autocomplete="off">
+              </div>
+              {% endif %}
+            </div>
+            <div class="actions">{{ button('Save changes', icon='check') }}</div>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty_state('github-logo', 'No GitHub Accounts connected yet',
+                   blurb='Create one or more GitHub Apps or add Personal Access Tokens below.') }}
+    {% endif %}
+  </div>
+</section>
+
+<section id="gh-apps" data-collapsible class="card">
+  {{ card_head('GitHub Apps', icon_name='app-window', level=2, collapse='gh-apps') }}
+  <div id="gh-apps-body" data-collapsible-body>
+    <p class="field-help" style="margin-top:0">
+      Create one or multiple private GitHub Apps (for personal accounts, work organizations, or separate GitHub accounts) with 1-click read-only permissions and automatic token rotation.
+      <strong>1)</strong> Create or register one or more apps below.
+      <strong>2)</strong> Click <em>Install on GitHub</em> on each app to attach accounts/organizations.
+      <strong>3)</strong> Use <em>Authorize user</em> for user-scoped widgets, or <em>Sync installations</em> after adding orgs.
+    </p>
+
+    {% if apps %}
+    <div class="gh-toolbar">
+      <div class="gh-summary">
+        <span class="gh-chip gh-chip--ok">{{ apps|length }} registered GitHub App{{ 's' if apps|length != 1 }}</span>
+      </div>
+      {% if apps|length > 1 %}
+      <form method="post" action="{{ url_for('github_core_admin.sync_all_apps_route') }}" class="inline">
+        <button type="submit" class="ghost" title="Sync installations across every registered GitHub App">
+          <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+          <span>Sync all apps</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    <ul class="gh-list" style="margin-bottom: 16px;">
+      {% for app in apps %}
+      <li class="gh-row">
+        <span class="gh-name">
+          <span class="gh-name-line">
+            <span class="gh-name-text">{{ app.name }}</span>
+            <span class="gh-chip gh-chip--ok">App ID {{ app.app_id }}</span>
+            {% if app.owner %}<span class="gh-chip gh-chip--muted">owner @{{ app.owner }}</span>{% endif %}
+            <span class="gh-chip gh-chip--muted">{{ app.account_count }} account{{ 's' if app.account_count != 1 }}</span>
+            {% if app.secret_unreadable %}<span class="gh-chip gh-chip--warn">keys unreadable</span>{% endif %}
+          </span>
+          <span class="gh-meta">
+            <span class="gh-id">{{ app.id }}</span>
+            {% if app.client_id %}<span>· Client ID: <code>{{ app.client_id }}</code></span>{% endif %}
+          </span>
+          {% if app.last_error %}
+          <span class="gh-err">{{ app.last_error }}</span>
+          {% endif %}
+        </span>
+        <div class="gh-actions">
+          {% if app.install_url %}
+          <a class="button" href="{{ app.install_url }}" target="_blank" rel="noopener" title="Install this app on your personal account or an organization">
+            <i class="ph ph-download-simple" aria-hidden="true"></i>
+            <span>Install on GitHub</span>
+          </a>
+          {% endif %}
+          <form method="post" action="{{ url_for('github_core_admin.sync_app_route', app_ref=app.id) }}" class="inline">
+            <button type="submit" class="ghost" title="Fetch personal and org installations for this app">
+              <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+              <span>Sync installations</span>
+            </button>
+          </form>
+          {% if app.has_oauth %}
+          <a class="ghost" href="{{ url_for('github_core_admin.oauth_start_route', app_ref=app.id) }}" title="Authorize a GitHub user via OAuth (needed for contributions, streak, stars, PR queue)">
+            <i class="ph ph-user-plus" aria-hidden="true"></i>
+            <span>Authorize user</span>
+          </a>
+          {% endif %}
+          <form method="post" action="{{ url_for('github_core_admin.test_app_route', app_ref=app.id) }}" class="inline">
+            <button type="submit" class="ghost" title="Verify this GitHub App's JWT credentials">
+              <i class="ph ph-plugs-connected" aria-hidden="true"></i>
+              <span>Test</span>
+            </button>
+          </form>
+          <button type="button" class="ghost" title="Edit GitHub App credentials"
+                  onclick="var el = document.getElementById('gh-app-edit-{{ app.id }}'); el.hidden = !el.hidden;">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+          </button>
+          <form method="post" action="{{ url_for('github_core_admin.delete_app_route', app_ref=app.id) }}" class="inline"
+                onsubmit="return confirm('Delete GitHub App {{ app.name }} and all accounts linked to it?');">
+            <button type="submit" class="ghost danger" title="Delete GitHub App">
+              <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+        <div class="gh-edit" id="gh-app-edit-{{ app.id }}" hidden>
+          <form method="post" action="{{ url_for('github_core_admin.edit_app_route', app_ref=app.id) }}" class="form">
+            <div class="field-grid">
+              <div class="field" style="flex:2;">
+                <label for="gh-app-edit-name-{{ app.id }}">App name</label>
+                <input type="text" id="gh-app-edit-name-{{ app.id }}" name="name" value="{{ app.name }}" required autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label for="gh-app-edit-id-{{ app.id }}">App ID</label>
+                <input type="text" id="gh-app-edit-id-{{ app.id }}" name="app_id" value="{{ app.app_id }}" required autocomplete="off">
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field" style="flex:1;">
+                <label for="gh-app-edit-cid-{{ app.id }}">Client ID (for User OAuth)</label>
+                <input type="text" id="gh-app-edit-cid-{{ app.id }}" name="client_id" value="{{ app.client_id }}" autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label for="gh-app-edit-csec-{{ app.id }}">Client Secret</label>
+                <input type="password" id="gh-app-edit-csec-{{ app.id }}" name="client_secret" placeholder="Leave blank to keep existing secret" autocomplete="off">
+              </div>
+            </div>
+            <div class="field">
+              <label for="gh-app-edit-pem-{{ app.id }}">Private Key (PEM)</label>
+              <textarea id="gh-app-edit-pem-{{ app.id }}" name="pem" rows="4" placeholder="Leave blank to keep existing PEM key"></textarea>
+            </div>
+            <div class="actions">{{ button('Save GitHub App', icon='check') }}</div>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h3 class="gh-subhead">{{ 'Create another GitHub App (or several at once)' if apps else 'Create GitHub App(s) (1-click)' }}</h3>
+    <form method="post" action="{{ url_for('github_core_admin.manifest_start_route') }}" class="form"
+          data-gh-repeater data-single-label="Create GitHub App (1-click)" data-multi-label="Create {n} GitHub Apps (1-click)">
+      <div class="gh-repeater-rows" data-repeater-rows>
+        <div class="gh-repeater-item" data-repeater-item>
+          <div class="field-grid">
+            <div class="field" style="flex:2;">
+              <label>GitHub App name</label>
+              <input type="text" name="name" value="{{ suggested_app_name }}" placeholder="e.g. Tesserae Work" maxlength="34" required autocomplete="off">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Owner organization (optional)</label>
+              <input type="text" name="org" placeholder="Leave blank for personal" autocomplete="off">
+            </div>
+            <div class="gh-row-remove-slot">
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove row" hidden>
+                <i class="ph ph-x" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="field-help">
+        Add multiple rows to create several GitHub Apps in sequence (e.g. one personal app plus one per organization). Callback URL sent to GitHub: <code>{{ base_url }}/plugins/github_core/oauth/callback</code>
+      </p>
+      <div class="actions gh-form-actions">
+        <button type="submit" class="primary" data-submit-btn>
+          <i class="ph ph-rocket-launch" aria-hidden="true"></i>
+          <span data-submit-label>Create GitHub App (1-click)</span>
+        </button>
+        <button type="button" class="ghost" data-add-row>
+          <i class="ph ph-plus" aria-hidden="true"></i>
+          <span>Add another GitHub App</span>
+        </button>
+      </div>
+      <template data-repeater-template>
+        <div class="gh-repeater-item" data-repeater-item>
+          <div class="field-grid">
+            <div class="field" style="flex:2;">
+              <label>GitHub App name</label>
+              <input type="text" name="name" placeholder="e.g. Tesserae Org" maxlength="34" required autocomplete="off">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Owner organization (optional)</label>
+              <input type="text" name="org" placeholder="Leave blank for personal" autocomplete="off">
+            </div>
+            <div class="gh-row-remove-slot">
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove row">
+                <i class="ph ph-x" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </form>
+
+    <details class="gh-details">
+      <summary>Already have one or more GitHub Apps? Register manually</summary>
+      <form method="post" action="{{ url_for('github_core_admin.create_app_manual_route') }}" class="form" style="margin-top:10px;"
+            data-gh-repeater data-single-label="Save GitHub App" data-multi-label="Save {n} GitHub Apps">
+        <div class="gh-repeater-rows" data-repeater-rows>
+          <div class="gh-repeater-item gh-repeater-card" data-repeater-item>
+            <div class="gh-repeater-head">
+              <strong data-item-title>GitHub App #1</strong>
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove GitHub App" hidden>
+                <i class="ph ph-x" aria-hidden="true"></i>
+                <span>Remove</span>
+              </button>
+            </div>
+            <div class="field-grid">
+              <div class="field" style="flex:2;">
+                <label>App name</label>
+                <input type="text" name="name" placeholder="My Tesserae App" required autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label>App ID</label>
+                <input type="text" name="app_id" placeholder="123456" required autocomplete="off">
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field" style="flex:1;">
+                <label>Client ID (for User OAuth)</label>
+                <input type="text" name="client_id" placeholder="Iv1.xxxxxxxx" autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label>Client Secret (for User OAuth)</label>
+                <input type="password" name="client_secret" placeholder="Optional" autocomplete="off">
+              </div>
+            </div>
+            <div class="field">
+              <label>Private Key (PEM)</label>
+              <textarea name="pem" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----" required></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="actions gh-form-actions">
+          <button type="submit" class="primary" data-submit-btn>
+            <i class="ph ph-check" aria-hidden="true"></i>
+            <span data-submit-label>Save GitHub App</span>
+          </button>
+          <button type="button" class="ghost" data-add-row>
+            <i class="ph ph-plus" aria-hidden="true"></i>
+            <span>Add another GitHub App</span>
+          </button>
+        </div>
+        <template data-repeater-template>
+          <div class="gh-repeater-item gh-repeater-card" data-repeater-item>
+            <div class="gh-repeater-head">
+              <strong data-item-title>GitHub App</strong>
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove GitHub App">
+                <i class="ph ph-x" aria-hidden="true"></i>
+                <span>Remove</span>
+              </button>
+            </div>
+            <div class="field-grid">
+              <div class="field" style="flex:2;">
+                <label>App name</label>
+                <input type="text" name="name" placeholder="Second Tesserae App" required autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label>App ID</label>
+                <input type="text" name="app_id" placeholder="123456" required autocomplete="off">
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field" style="flex:1;">
+                <label>Client ID (for User OAuth)</label>
+                <input type="text" name="client_id" placeholder="Iv1.xxxxxxxx" autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label>Client Secret (for User OAuth)</label>
+                <input type="password" name="client_secret" placeholder="Optional" autocomplete="off">
+              </div>
+            </div>
+            <div class="field">
+              <label>Private Key (PEM)</label>
+              <textarea name="pem" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----" required></textarea>
+            </div>
+          </div>
+        </template>
+      </form>
+    </details>
+  </div>
+</section>
+
+<section id="gh-pats" data-collapsible class="card">
+  {{ card_head('Personal Access Tokens (PATs)', icon_name='key', level=2, collapse='gh-pats') }}
+  <div id="gh-pats-body" data-collapsible-body>
+    <p class="field-help" style="margin-top:0">
+      Add one or multiple classic (<code>ghp_...</code>) or fine-grained (<code>github_pat_...</code>) Personal Access Tokens as named accounts. Each PAT can be selected independently in any widget. (GitHub Apps above remain recommended for automatic token rotation and multi-org installations.)
+    </p>
+
+    {% if pat_accounts %}
+    <ul class="gh-list" style="margin-bottom: 16px;">
+      {% for acc in pat_accounts %}
+      <li class="gh-row">
+        <span class="gh-name">
+          <span class="gh-name-line">
+            <span class="gh-name-text">{{ acc.name }}</span>
+            {% if acc.pat_kind %}
+            <span class="gh-chip gh-chip--type">{{ acc.pat_kind }}</span>
+            {% else %}
+            <span class="gh-chip gh-chip--type">PAT</span>
+            {% endif %}
+            {% if acc.username %}
+            <span class="gh-chip gh-chip--ok">@{{ acc.username }}</span>
+            {% else %}
+            <span class="gh-chip gh-chip--muted">not tested yet</span>
+            {% endif %}
+            {% if acc.secret_unreadable %}
+            <span class="gh-chip gh-chip--warn">token unreadable, re-enter</span>
+            {% elif acc.masked_secret %}
+            <span class="gh-pat">{{ acc.masked_secret }}</span>
+            {% endif %}
+          </span>
+          <span class="gh-meta"><span class="gh-id">{{ acc.id }}</span></span>
+          {% if acc.last_error %}
+          <span class="gh-err">{{ acc.last_error }}</span>
+          {% endif %}
+        </span>
+        <div class="gh-actions">
+          <button type="button" class="ghost" title="Edit PAT"
+                  onclick="var el = document.getElementById('gh-pat-edit-{{ acc.id }}'); el.hidden = !el.hidden;">
+            <i class="ph ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+          </button>
+          <form method="post" action="{{ url_for('github_core_admin.delete_account_route', account_id=acc.id) }}" class="inline"
+                onsubmit="return confirm('Delete PAT account {{ acc.name }}?');">
+            <button type="submit" class="ghost danger" title="Delete PAT">
+              <i class="ph ph-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('github_core_admin.test_account_route', account_id=acc.id) }}" class="inline">
+            <button type="submit" class="button" title="Test live GitHub API access">
+              <i class="ph ph-plugs-connected" aria-hidden="true"></i>
+              <span>Test</span>
+            </button>
+          </form>
+        </div>
+        <div class="gh-edit" id="gh-pat-edit-{{ acc.id }}" hidden>
+          <form method="post" action="{{ url_for('github_core_admin.edit_account_route', account_id=acc.id) }}" class="form">
+            <div class="field-grid">
+              <div class="field" style="flex:1;">
+                <label for="gh-pat-edit-name-{{ acc.id }}">Account name</label>
+                <input type="text" id="gh-pat-edit-name-{{ acc.id }}" name="name" value="{{ acc.name }}" required autocomplete="off">
+              </div>
+              <div class="field" style="flex:1;">
+                <label for="gh-pat-edit-user-{{ acc.id }}">Username (optional)</label>
+                <input type="text" id="gh-pat-edit-user-{{ acc.id }}" name="username" value="{{ acc.username }}" placeholder="Auto-detected on test" autocomplete="off">
+              </div>
+              <div class="field" style="flex:2;">
+                <label for="gh-pat-edit-val-{{ acc.id }}">Personal Access Token</label>
+                <input type="password" id="gh-pat-edit-val-{{ acc.id }}" name="pat" placeholder="Leave blank to keep existing token" autocomplete="off">
+              </div>
+            </div>
+            <div class="actions">{{ button('Save changes', icon='check') }}</div>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h3 class="gh-subhead">{{ 'Add more Personal Access Tokens' if pat_accounts else 'Add Personal Access Token(s)' }}</h3>
+    <form method="post" action="{{ url_for('github_core_admin.create_pat_account_route') }}" class="form"
+          data-gh-repeater data-single-label="Add PAT account" data-multi-label="Add {n} PAT accounts">
+      <div class="gh-repeater-rows" data-repeater-rows>
+        <div class="gh-repeater-item" data-repeater-item>
+          <div class="field-grid">
+            <div class="field" style="flex:1;">
+              <label>Account name</label>
+              <input type="text" name="name" placeholder="Personal PAT" required autocomplete="off">
+            </div>
+            <div class="field" style="flex:2;">
+              <label>Personal Access Token</label>
+              <input type="password" name="pat" placeholder="github_pat_... or ghp_..." required autocomplete="off">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Username (optional)</label>
+              <input type="text" name="username" placeholder="Auto-detected on test" autocomplete="off">
+            </div>
+            <div class="gh-row-remove-slot">
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove row" hidden>
+                <i class="ph ph-x" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <label class="gh-check">
+        <input type="checkbox" name="verify_on_save" value="1" checked>
+        <span>Test token(s) and detect <code>@username</code> automatically on save</span>
+      </label>
+      <div class="actions gh-form-actions">
+        <button type="submit" class="primary" data-submit-btn>
+          <i class="ph ph-plus" aria-hidden="true"></i>
+          <span data-submit-label>Add PAT account</span>
+        </button>
+        <button type="button" class="ghost" data-add-row>
+          <i class="ph ph-plus" aria-hidden="true"></i>
+          <span>Add another PAT</span>
+        </button>
+      </div>
+      <template data-repeater-template>
+        <div class="gh-repeater-item" data-repeater-item>
+          <div class="field-grid">
+            <div class="field" style="flex:1;">
+              <label>Account name</label>
+              <input type="text" name="name" placeholder="Work PAT" required autocomplete="off">
+            </div>
+            <div class="field" style="flex:2;">
+              <label>Personal Access Token</label>
+              <input type="password" name="pat" placeholder="github_pat_... or ghp_..." required autocomplete="off">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Username (optional)</label>
+              <input type="text" name="username" placeholder="Auto-detected on test" autocomplete="off">
+            </div>
+            <div class="gh-row-remove-slot">
+              <button type="button" class="ghost danger gh-remove-row" data-remove-row title="Remove row">
+                <i class="ph ph-x" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </form>
+  </div>
+</section>
+
+<script>
+  (function () {
+    document.querySelectorAll('[data-gh-repeater]').forEach(function (form) {
+      var rowsEl = form.querySelector('[data-repeater-rows]');
+      var tpl = form.querySelector('[data-repeater-template]');
+      var addBtn = form.querySelector('[data-add-row]');
+      var submitLabel = form.querySelector('[data-submit-label]');
+      if (!rowsEl || !tpl || !addBtn) return;
+
+      function syncState() {
+        var items = rowsEl.querySelectorAll('[data-repeater-item]');
+        var count = items.length;
+        items.forEach(function (item, idx) {
+          var removeBtn = item.querySelector('[data-remove-row]');
+          if (removeBtn) removeBtn.hidden = count <= 1;
+          var titleEl = item.querySelector('[data-item-title]');
+          if (titleEl) titleEl.textContent = 'GitHub App #' + (idx + 1);
+        });
+        if (submitLabel) {
+          var single = form.getAttribute('data-single-label') || submitLabel.textContent;
+          var multi = form.getAttribute('data-multi-label') || single;
+          submitLabel.textContent = count > 1 ? multi.replace('{n}', String(count)) : single;
+        }
+      }
+
+      addBtn.addEventListener('click', function () {
+        var frag = tpl.content.cloneNode(true);
+        rowsEl.appendChild(frag);
+        syncState();
+        var items = rowsEl.querySelectorAll('[data-repeater-item]');
+        var last = items[items.length - 1];
+        var firstInput = last && last.querySelector('input, textarea');
+        if (firstInput) firstInput.focus();
+      });
+
+      rowsEl.addEventListener('click', function (ev) {
+        var btn = ev.target && ev.target.closest('[data-remove-row]');
+        if (!btn) return;
+        var item = btn.closest('[data-repeater-item]');
+        if (item && rowsEl.querySelectorAll('[data-repeater-item]').length > 1) {
+          item.remove();
+          syncState();
+        }
+      });
+
+      syncState();
+    });
+  })();
+</script>
+
+<style>
+  .gh-legacy-banner { border-left: 3px solid var(--t-accent, #0d8c7e); padding: 12px 14px; font-size: var(--t-size-sm); }
+  .gh-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .gh-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .gh-subhead { font-size: var(--t-size-sm); font-weight: 600; color: var(--t-fg-soft); margin: 4px 0 10px; }
+  .gh-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .gh-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--t-border);
+    border-radius: var(--t-radius-md);
+    background: var(--t-surface);
+    box-shadow: var(--t-shadow-xs);
+  }
+  .gh-name { display: grid; gap: 3px; min-width: 0; }
+  .gh-name-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .gh-name-text { font-weight: 600; font-size: var(--t-size-md); }
+  .gh-meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--t-size-xs); color: var(--t-fg-soft); }
+  .gh-id, .gh-pat { font: var(--t-size-xs)/1.2 var(--t-font-mono); color: var(--t-fg-soft); }
+  .gh-err { font-size: var(--t-size-xs); color: #b91c1c; margin-top: 2px; }
+  .gh-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    font: var(--t-size-xs)/1.2 var(--t-font-body);
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .gh-chip--default { background: color-mix(in oklab, var(--t-accent, #0d8c7e) 18%, transparent); color: var(--t-accent, #0d8c7e); font-weight: 600; border-color: color-mix(in oklab, var(--t-accent, #0d8c7e) 35%, transparent); }
+  .gh-chip--type { background: color-mix(in oklab, var(--t-fg-soft) 12%, transparent); color: var(--t-fg); font-weight: 500; }
+  .gh-chip--ok { background: color-mix(in oklab, var(--t-accent, #0d8c7e) 14%, transparent); color: var(--t-accent, #0d8c7e); }
+  .gh-chip--muted { background: color-mix(in oklab, var(--t-fg-soft) 10%, transparent); color: var(--t-fg-soft); }
+  .gh-chip--warn { background: color-mix(in oklab, #d97706 15%, transparent); color: #92400e; border-color: color-mix(in oklab, #d97706 40%, transparent); }
+  .gh-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .gh-actions form { margin: 0; }
+  .gh-edit { grid-column: 1 / -1; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--t-border); }
+  .gh-details { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--t-border); }
+  .gh-details > summary { cursor: pointer; font-weight: 500; font-size: var(--t-size-sm); color: var(--t-fg-soft); }
+  .gh-repeater-rows { display: grid; gap: 10px; }
+  .gh-repeater-item .field-grid { align-items: end; }
+  .gh-repeater-card {
+    padding: 12px;
+    border: 1px solid var(--t-border);
+    border-radius: var(--t-radius-md);
+    background: var(--t-surface);
+  }
+  .gh-repeater-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: var(--t-size-sm); }
+  .gh-row-remove-slot { display: flex; align-items: flex-end; padding-bottom: 2px; }
+  .gh-form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .gh-check {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: var(--t-size-sm); color: var(--t-fg-soft);
+    margin: 10px 0 4px; cursor: pointer;
+  }
+  .gh-check input { width: auto; margin: 0; }
+</style>
+{% endblock %}

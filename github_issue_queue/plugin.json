@@ -1,0 +1,47 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "GitHub, Issue Queue",
+  "version": "0.1.0",
+  "kind": "widget",
+  "description": "Open issues assigned to you plus issues you opened, or unassigned and assigned issues across an organization. Each row carries an issue-age chip (muted → ochre → terracotta → plum as the issue ages), compact labels, and a comment-bubble chip showing discussion activity. Sections are sorted oldest-first so the stalest issue floats to the top.",
+  "icon": "ph-record",
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
+  "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account."
+    },
+    {
+      "name": "user",
+      "type": "string",
+      "label": "Username",
+      "default": "",
+      "help": "Blank uses the username or organization of the selected GitHub account."
+    },
+    {
+      "name": "max_results",
+      "type": "number",
+      "label": "How many per section",
+      "default": 6,
+      "help": "Issues shown in each section."
+    }
+  ],
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
+}

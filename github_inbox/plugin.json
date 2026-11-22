@@ -14,11 +14,12 @@
   },
   "cell_options": [
     {
-      "name": "user",
-      "type": "string",
-      "label": "Username",
+      "name": "account",
+      "type": "select",
+      "label": "Account",
       "default": "",
-      "help": "Blank uses the username set in GitHub Core."
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
     },
     {
       "name": "show_issues",
@@ -37,7 +38,7 @@
       "type": "boolean",
       "label": "Discussions",
       "default": true,
-      "help": "Needs a token in GitHub Core."
+      "help": "Needs a connected GitHub account in GitHub Core."
     },
     {
       "name": "group_by",
@@ -67,6 +68,14 @@
       "help": "Rows shown. Rows that do not fit the cell are counted in a +N more footer."
     },
     {
+      "name": "user",
+      "type": "string",
+      "label": "Username",
+      "default": "",
+      "help": "Optional username or org override. Blank uses the selected GitHub account.",
+      "advanced": true
+    },
+    {
       "name": "extra_owners",
       "type": "string",
       "label": "Also include",
@@ -81,7 +90,7 @@
       "default": [],
       "advanced": true,
       "choices_from": "repo",
-      "help": "Repos to skip, picked from your own."
+      "help": "Repos to skip, picked from the selected GitHub account."
     },
     {
       "name": "exclude_patterns",
@@ -147,6 +156,7 @@
     "needs_network": true
   },
   "requires": [
-    "network:api.github.com"
+    "network:api.github.com",
+    "plugin:github_core"
   ]
 }

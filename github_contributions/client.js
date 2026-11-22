@@ -20,6 +20,16 @@ function escapeHtml(s) {
 // last 12 months chronologically, each {month: "JAN", count: N}. Even
 // for accounts with sparse activity we always emit 12 cells so the
 // strip width stays consistent across users.
+const PUBLIC_ONLY_HINT =
+  "This account is a GitHub App installation, so private contributions may be missing. " +
+  "Authorize a user on this app in GitHub Core to include them.";
+
+function publicOnlyIcon(data) {
+  if (!data.public_only) return "";
+  return `<i class="ph-bold ph-eye-slash" style="color:var(--text-secondary)" role="img"
+    aria-label="${escapeHtml(PUBLIC_ONLY_HINT)}" title="${escapeHtml(PUBLIC_ONLY_HINT)}"></i>`;
+}
+
 function monthlyTotals(weeks) {
   const byMonth = new Map();
   for (const week of weeks) {
@@ -270,6 +280,7 @@ export default function render(shadow, ctx) {
         <i class="ph-bold ph-github-logo" style="color:var(--accent-3)"></i>
         <h3>${escapeHtml(user)}</h3>
         <span class="w-title-meta">${escapeHtml(String(data.total ?? 0))} CONTRIBUTIONS</span>
+        ${publicOnlyIcon(data)}
       </div>
       <div class="w-body" style="gap:var(--space-3)">
         <div class="contrib-streaks">

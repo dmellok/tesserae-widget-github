@@ -15,6 +15,14 @@
   },
   "cell_options": [
     {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
+    {
       "name": "repo",
       "type": "string",
       "label": "Repo",
@@ -27,14 +35,51 @@
     "needs_network": true
   },
   "requires": [
-    "network:api.github.com"
+    "network:api.github.com",
+    "plugin:github_core"
   ],
   "fragments": [
-    { "id": "full", "label": "Repo card", "w": 300, "h": 220, "icon": "ph-book-bookmark" },
-    { "id": "stars", "label": "Stars", "w": 150, "h": 90, "icon": "ph-star" },
-    { "id": "stats", "label": "Stats grid", "w": 200, "h": 150, "icon": "ph-squares-four" },
-    { "id": "languages", "label": "Languages", "w": 240, "h": 90, "icon": "ph-code" },
-    { "id": "contributors", "label": "Contributors", "w": 260, "h": 90, "icon": "ph-users-three" },
-    { "id": "activity", "label": "Commit activity", "w": 220, "h": 80, "icon": "ph-chart-line" }
+    {
+      "id": "full",
+      "label": "Repo card",
+      "w": 300,
+      "h": 220,
+      "icon": "ph-book-bookmark"
+    },
+    {
+      "id": "stars",
+      "label": "Stars",
+      "w": 150,
+      "h": 90,
+      "icon": "ph-star"
+    },
+    {
+      "id": "stats",
+      "label": "Stats grid",
+      "w": 200,
+      "h": 150,
+      "icon": "ph-squares-four"
+    },
+    {
+      "id": "languages",
+      "label": "Languages",
+      "w": 240,
+      "h": 90,
+      "icon": "ph-code"
+    },
+    {
+      "id": "contributors",
+      "label": "Contributors",
+      "w": 260,
+      "h": 90,
+      "icon": "ph-users-three"
+    },
+    {
+      "id": "activity",
+      "label": "Commit activity",
+      "w": 220,
+      "h": 80,
+      "icon": "ph-chart-line"
+    }
   ]
 }

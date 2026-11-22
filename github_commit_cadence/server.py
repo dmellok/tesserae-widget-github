@@ -1,12 +1,4 @@
-"""github_commit_cadence, daily commits across the last 30 days.
-
-GitHub's /repos/{repo}/stats/commit_activity gives 52 weeks, each
-with a 7-element ``days`` array (Sunday-first) plus a weekly
-``total``. We take the trailing 30 days, expand into per-day bars,
-and compute headline + sub stats. The endpoint is async and may
-return 202 while stats compute, which the github_core helper raises
-as ``GithubAcceptedError`` so we know to skip caching.
-"""
+"""github_commit_cadence, daily commits across the last 30 days."""
 
 from __future__ import annotations
 
@@ -25,12 +17,21 @@ REPO_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 
 
 def _core() -> Any:
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=False))
 
 
 def _flatten(weeks: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Expand the stats response into a sorted list of {date, count}
-    daily entries."""
     out: list[dict[str, Any]] = []
     for week in weeks or []:
         ts = week.get("week")
@@ -56,7 +57,6 @@ def _tail(days: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
     cutoff = today - timedelta(days=n - 1)
     cutoff_key = cutoff.isoformat()
     out = [d for d in days if d["date"] >= cutoff_key]
-    # Pad with zero days so the bar count is always n (clean axis).
     have = {d["date"] for d in out}
     cursor: date = cutoff
     while cursor <= today:
@@ -77,11 +77,22 @@ def fetch(
         return {"error": "Set repo as 'owner/repo' (e.g. dmellok/tesserae)."}
 
     core = _core()
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget."}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=False)
+    except Exception as err:
+        return {"error": core.coerce_error(err)}
+    account_name = str((account or {}).get("name") or "")
+    acct_key = str((account or {}).get("id") or "public")
+
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    safe = repo.replace("/", "__")
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{acct_key}_{repo.replace('/', '__')}")
     cache = data_dir / f"commit_cadence_{safe}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             cached = json.loads(cache.read_text(encoding="utf-8"))
             if cached.get("bars"):
@@ -92,13 +103,14 @@ def fetch(
     pending = False
     try:
         weeks = core.request_json(
-            f"https://api.github.com/repos/{repo}/stats/commit_activity"
+            f"https://api.github.com/repos/{repo}/stats/commit_activity",
+            account_id=account_id,
         )
     except core.GithubAcceptedError:
         weeks = []
         pending = True
     except Exception as err:
-        return {"error": core.coerce_error(err)}
+        return {"error": core.coerce_error(err, account_name=account_name, repo=repo)}
 
     days = _flatten(weeks if isinstance(weeks, list) else [])
     bars = _tail(days, WINDOW_DAYS)

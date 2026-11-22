@@ -5,8 +5,23 @@
   "kind": "widget",
   "description": "Full-bleed CI status banner across one or more watched repos. Renders ALL GREEN, N FAILING, or N RUNNING as the hero, with the failing repos called out by name. Useful as a big-mode complement to GitHub Actions: this is the at-a-glance answer to 'is anything red right now'. Public repos work without a token.",
   "icon": "ph-traffic-cone",
-  "supports": { "sizes": ["xs", "sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "xs",
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
     {
       "name": "repos",
       "type": "textarea",
@@ -15,6 +30,13 @@
       "help": "One per line, as owner/repo."
     }
   ],
-  "render": { "dither": "none", "needs_network": true, "full_bleed": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true,
+    "full_bleed": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

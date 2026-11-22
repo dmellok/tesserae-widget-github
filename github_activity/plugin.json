@@ -3,7 +3,7 @@
   "name": "GitHub, Activity",
   "version": "0.3.1",
   "kind": "widget",
-  "description": "Recent public activity for a GitHub user. Pushes / PRs / issues / releases broken out as type-coloured tiles; a 7-day stacked-bar histogram segments each day's events by type and centres a Phosphor glyph on the dominant kind; an activity-streak pill counts consecutive days back from today. Defaults to the username in Plugins \u2192 GitHub Core.",
+  "description": "Recent public activity for a GitHub user. Pushes / PRs / issues / releases broken out as type-coloured tiles; a 7-day stacked-bar histogram segments each day's events by type and centres a Phosphor glyph on the dominant kind; an activity-streak pill counts consecutive days back from today. Defaults to the username in Plugins → GitHub Core.",
   "icon": "ph-git-commit",
   "supports": {
     "sizes": [
@@ -14,11 +14,19 @@
   },
   "cell_options": [
     {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
+    {
       "name": "user",
       "type": "string",
       "label": "Username",
       "default": "",
-      "help": "Blank uses the username set in GitHub Core."
+      "help": "Blank uses the username of the selected GitHub account."
     },
     {
       "name": "max_events",
@@ -33,12 +41,37 @@
     "needs_network": true
   },
   "requires": [
-    "network:api.github.com"
+    "network:api.github.com",
+    "plugin:github_core"
   ],
   "fragments": [
-    { "id": "full", "label": "Activity card", "w": 300, "h": 200, "icon": "ph-git-commit" },
-    { "id": "events", "label": "Events count", "w": 160, "h": 90, "icon": "ph-pulse" },
-    { "id": "stats", "label": "Type breakdown", "w": 220, "h": 120, "icon": "ph-squares-four" },
-    { "id": "histogram", "label": "7-day histogram", "w": 260, "h": 90, "icon": "ph-chart-bar" }
+    {
+      "id": "full",
+      "label": "Activity card",
+      "w": 300,
+      "h": 200,
+      "icon": "ph-git-commit"
+    },
+    {
+      "id": "events",
+      "label": "Events count",
+      "w": 160,
+      "h": 90,
+      "icon": "ph-pulse"
+    },
+    {
+      "id": "stats",
+      "label": "Type breakdown",
+      "w": 220,
+      "h": 120,
+      "icon": "ph-squares-four"
+    },
+    {
+      "id": "histogram",
+      "label": "7-day histogram",
+      "w": 260,
+      "h": 90,
+      "icon": "ph-chart-bar"
+    }
   ]
 }

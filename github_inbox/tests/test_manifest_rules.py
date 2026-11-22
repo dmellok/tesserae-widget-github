@@ -27,7 +27,7 @@ def _up_front(opts: list[dict]) -> list[str]:
 
 
 def test_every_widget_is_checked():
-    assert len(MANIFESTS) == 15
+    assert len(MANIFESTS) == 16
 
 
 @pytest.mark.parametrize("path", MANIFESTS, ids=lambda p: p.parent.name)
@@ -61,7 +61,7 @@ def test_labels_are_plain(path):
 
 
 def test_shared_labels_match_across_widgets():
-    shared = {"user": "Username", "repos": "Repos", "repo": "Repo"}
+    shared = {"account": "Account", "user": "Username", "repos": "Repos", "repo": "Repo"}
     for path in MANIFESTS:
         for o in _options(path):
             if o["name"] in shared:
@@ -71,7 +71,7 @@ def test_shared_labels_match_across_widgets():
 def test_inbox_panel():
     opts = _options(ROOT / "github_inbox" / "plugin.json")
     assert _up_front(opts) == [
-        "user",
+        "account",
         "show_issues",
         "show_prs",
         "show_discussions",
@@ -79,6 +79,7 @@ def test_inbox_panel():
         "max_items",
     ]
     assert [o["name"] for o in opts if o.get("advanced")] == [
+        "user",
         "extra_owners",
         "exclude_repos",
         "exclude_patterns",

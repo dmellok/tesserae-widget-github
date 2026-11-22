@@ -5,16 +5,36 @@
   "kind": "widget",
   "description": "12-week events heatmap (commits + PRs + issues + releases). Same grid shape as the GitHub contributions calendar but driven by the public events feed, so it reads activity rather than contribution credit. Three pills above show this week's totals by type. Token optional but raises the rate limit; public events only.",
   "icon": "ph-grid-four",
-  "supports": { "sizes": ["sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account, or public access if none is connected."
+    },
     {
       "name": "user",
       "type": "string",
       "label": "Username",
       "default": "",
-      "help": "Blank uses the username set in GitHub Core."
+      "help": "Blank uses the username of the selected GitHub account."
     }
   ],
-  "render": { "dither": "none", "needs_network": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

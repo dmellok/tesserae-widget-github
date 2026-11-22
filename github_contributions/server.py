@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -40,8 +41,19 @@ LEVEL_TO_INT = {
 }
 
 
-def _core():
-    return current_app.config["PLUGIN_REGISTRY"].get("github_core").server_module
+def _core() -> Any:
+    plugin = current_app.config["PLUGIN_REGISTRY"].get("github_core")
+    return plugin.server_module if plugin is not None else None
+
+
+def choices(name: str, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    del options
+    if name != "account":
+        return []
+    core = _core()
+    if core is None:
+        return [{"value": "", "label": "Install GitHub Core to configure accounts.", "note": True}]
+    return list(core.account_choices(require_auth=True))
 
 
 def fetch(
@@ -49,44 +61,74 @@ def fetch(
 ) -> dict[str, Any]:
     del settings
     core = _core()
-    if not core.get_token():
+    if core is None:
+        return {"error": "Install and enable GitHub Core to use this widget.", "weeks": []}
+
+    account_id = (options.get("account") or "").strip() or None
+    try:
+        account = core.resolve_account(account_id, require_auth=True)
+    except Exception as err:
+        return {"error": core.coerce_error(err), "weeks": []}
+    assert account is not None
+    account_name = str(account.get("name") or "")
+    acct_key = str(account.get("id") or "default")
+    is_org_account = str(account.get("account_type") or "").lower() == "organization"
+    explicit_user = (options.get("user") or "").strip().lstrip("@")
+
+    if is_org_account and not explicit_user:
+        org_login = str(account.get("username") or account_name)
         return {
-            "error": "Add a GitHub PAT in Plugins → GitHub Core. GraphQL requires auth.",
+            "error": (
+                f"GitHub only provides contribution calendars for individual users, not organizations "
+                f"(@{org_login}). Enter a personal GitHub username in this widget's Username option, "
+                "or select a user account."
+            ),
             "weeks": [],
         }
-    user = (options.get("user") or "").strip() or core.get_username()
+
+    user = explicit_user or core.get_username(account_id)
     if not user:
-        return {"error": "Set a GitHub username, here or as github_core default.", "weeks": []}
+        return {
+            "error": (
+                f"No GitHub username resolved for '{account_name}'. Enter a username in widget "
+                "options or click Test on the account in GitHub Core (/plugins/github_core/)."
+            ),
+            "weeks": [],
+        }
 
     data_dir = Path(ctx["data_dir"])
     data_dir.mkdir(parents=True, exist_ok=True)
-    # v2 cache key, bump when the payload shape changes so a stale
-    # cached v1 file (without the streak/busiest fields) doesn't keep
-    # serving until the TTL expires.
-    cache = data_dir / f"contrib_v2_{user}.json"
-    if cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
+    safe_key = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{acct_key}_{user}")
+    cache = data_dir / f"contrib_v2_{safe_key}.json"
+    if not ctx.get("fresh") and cache.exists() and time.time() - cache.stat().st_mtime < CACHE_TTL_S:
         try:
             return json.loads(cache.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
-    # Drop any v1 file lying around from earlier versions.
     legacy = data_dir / f"contrib_{user}.json"
     if legacy.exists():
         with contextlib.suppress(OSError):
             legacy.unlink()
 
     try:
-        payload = core.request_graphql(QUERY, {"user": user})
+        payload = core.request_graphql(QUERY, {"user": user}, account_id=account_id)
     except Exception as err:
-        return {"error": core.coerce_error(err), "weeks": []}
+        return {
+            "error": core.coerce_error(err, account_name=account_name, user=user),
+            "weeks": [],
+        }
 
-    if payload.get("errors"):
-        return {"error": payload["errors"][0].get("message", "GraphQL error"), "weeks": []}
+    gql_err = core.coerce_graphql_error(
+        payload, account_name=account_name, auth_type=str(account.get("auth_type") or "")
+    )
+    if gql_err:
+        return {"error": gql_err, "weeks": []}
+
     cal = (
         ((payload.get("data") or {}).get("user") or {}).get("contributionsCollection") or {}
     ).get("contributionCalendar")
     if not cal:
-        return {"error": f"No contribution data for @{user}.", "weeks": []}
+        return {"error": f"No contribution data found for @{user} (check the username).", "weeks": []}
 
     weeks = []
     for w in cal.get("weeks") or []:
@@ -101,9 +143,6 @@ def fetch(
             )
         weeks.append(days)
 
-    # Derived stats, current streak (consecutive days with count > 0,
-    # ending today), longest streak in the year, busiest day, this week
-    # / month totals. All from the flat sorted day list.
     flat = sorted(
         (d for w in weeks for d in w),
         key=lambda d: d.get("date") or "",
@@ -121,16 +160,11 @@ def fetch(
         if c > busiest["count"]:
             busiest = {"date": d.get("date") or "", "count": c}
 
-    # Current streak, walk backward from today over days with > 0,
-    # tolerate today being zero (still-early-in-day) by skipping it
-    # when counting; the streak only breaks on a confirmed past-day zero.
     current_streak = 0
     for d in reversed(flat):
         if (d.get("count") or 0) > 0:
             current_streak += 1
         else:
-            # Allow today itself to be zero without breaking the streak;
-            # any earlier zero breaks it.
             if d is flat[-1]:
                 continue
             break
@@ -148,6 +182,9 @@ def fetch(
         "busiest_count": busiest["count"],
         "this_week": this_week,
         "this_month": this_month,
+        # Installation tokens act as the app, not the user, so GitHub may leave
+        # out the user's private contributions.
+        "public_only": str(account.get("auth_type") or "") == "github_app_installation",
     }
     with contextlib.suppress(OSError):
         cache.write_text(json.dumps(result), encoding="utf-8")

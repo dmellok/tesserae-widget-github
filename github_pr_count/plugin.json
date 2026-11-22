@@ -5,14 +5,29 @@
   "kind": "widget",
   "description": "Hero number: total open PRs across your authored set plus PRs awaiting your review. Splits the count into a primary tile (everything that needs attention) and two sub-counts (yours / review-requested). Background colour shifts amber when any PR has been open more than seven days. Token required (search API needs auth).",
   "icon": "ph-git-pull-request",
-  "supports": { "sizes": ["xs", "sm", "md", "lg"] },
+  "supports": {
+    "sizes": [
+      "xs",
+      "sm",
+      "md",
+      "lg"
+    ]
+  },
   "cell_options": [
+    {
+      "name": "account",
+      "type": "select",
+      "label": "Account",
+      "default": "",
+      "choices_from": "account",
+      "help": "Connected GitHub App or account from GitHub Core. Blank uses the default account."
+    },
     {
       "name": "user",
       "type": "string",
       "label": "Username",
       "default": "",
-      "help": "Blank uses the username set in GitHub Core."
+      "help": "Blank uses the username of the selected GitHub account."
     },
     {
       "name": "stale_days",
@@ -24,6 +39,12 @@
       "help": "Days an open PR can wait before it shows as stale."
     }
   ],
-  "render": { "dither": "none", "needs_network": true },
-  "requires": ["network:api.github.com"]
+  "render": {
+    "dither": "none",
+    "needs_network": true
+  },
+  "requires": [
+    "network:api.github.com",
+    "plugin:github_core"
+  ]
 }

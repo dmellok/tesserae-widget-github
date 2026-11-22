@@ -60,11 +60,11 @@ export default function render(shadow, ctx) {
         </div>
         <div class="status-grid">
           <div class="status-cell">
-            <span class="u-label">Yours</span>
+            <span class="u-label">${escapeHtml(data.yours_label || "Yours")}</span>
             <span class="v" style="color:var(--accent-5)">${escapeHtml(String(yours))}</span>
           </div>
           <div class="status-cell">
-            <span class="u-label">Review</span>
+            <span class="u-label">${escapeHtml(data.review_label || "Review")}</span>
             <span class="v" style="color:var(--accent-4)">${escapeHtml(String(review))}</span>
           </div>
         </div>

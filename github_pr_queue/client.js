@@ -227,6 +227,11 @@ export default function render(shadow, ctx) {
     }
   `;
 
+  const yoursLabel = data.yours_label || "Mine";
+  const reviewLabel = data.review_label || "Review requested";
+  const yoursMeta = data.yours_meta || "MINE";
+  const reviewMeta = data.review_meta || "REVIEW";
+
   shadow.innerHTML = `
     ${css}
     <style>${layout}</style>
@@ -234,11 +239,11 @@ export default function render(shadow, ctx) {
       <div class="w-title">
         <i class="ph-bold ph-git-pull-request" style="color:var(--accent-1)"></i>
         <h3>PR Queue</h3>
-        <span class="w-title-meta">${yours.length} MINE · ${review.length} REVIEW</span>
+        <span class="w-title-meta">${yours.length} ${escapeHtml(yoursMeta)} · ${review.length} ${escapeHtml(reviewMeta)}</span>
       </div>
       <div class="w-body list-body" style="gap:0">
-        ${yours.length ? sectionHeader("Mine", yours.length) + yoursRows : ""}
-        ${review.length ? sectionHeader("Review requested", review.length) + reviewRows : ""}
+        ${yours.length ? sectionHeader(yoursLabel, yours.length) + yoursRows : ""}
+        ${review.length ? sectionHeader(reviewLabel, review.length) + reviewRows : ""}
       </div>
     </div>`;
 }

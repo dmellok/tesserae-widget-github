@@ -139,6 +139,9 @@ export default function render(shadow, ctx) {
   else meta = `<span class="w-title-meta">${runs.length} OK</span>`;
 
   if (runs.length === 0) {
+    const emptyMsg = data.auto
+      ? `No recent runs in the ${Number(data.scanned) || 0} most recently pushed repos.`
+      : "No runs.";
     shadow.innerHTML = `
       ${css}
       <div class="w" data-widget="github_actions">
@@ -146,7 +149,7 @@ export default function render(shadow, ctx) {
           <i class="ph-bold ph-github-logo" style="color:var(--accent-5)"></i>
           <h3>Actions</h3>
         </div>
-        <div class="w-body"><p class="u-muted">No runs.</p></div>
+        <div class="w-body"><p class="u-muted">${escapeHtml(emptyMsg)}</p></div>
       </div>`;
     return;
   }
